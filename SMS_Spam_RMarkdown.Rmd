@@ -1,0 +1,42 @@
+---
+title: "SMS_Spam"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Downloading dataset
+```{r}
+SMS_Spam_Dataset <- read.csv("./SMS_Spam_Dataset.csv", stringsAsFactors = FALSE)
+str(SMS_Spam_Dataset)
+```
+
+## Cleaning Noisy Data
+
+You can also embed plots, for example:
+
+```{r}
+ColumnsToBeRemoved <- c("X","X.1", "X.2")
+SMS_Spam <- SMS_Spam_Dataset[ , !(names(SMS_Spam_Dataset) %in% ColumnsToBeRemoved)]
+
+```
+
+## Changng column names and changing "ham" to "Legtimate" and "spam" to "Spam".
+
+```{r}
+names(SMS_Spam) <- c("Message_Tag", "Message")
+levels(as.factor(SMS_Spam$Message_Tag))
+
+SMS_Spam$Message_Tag[SMS_Spam$Message_Tag == "ham"] <- "Legitimate"
+SMS_Spam$Message_Tag[SMS_Spam$Message_Tag == "spam"] <- "Spam"
+
+SMS_Spam$Message_Tag <- factor(SMS_Spam$Message_Tag)
+```
