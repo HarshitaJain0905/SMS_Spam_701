@@ -1,0 +1,174 @@
+---
+title: "SMS"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## To download the dataset.
+```{r}
+Spam_SMS <- read.csv("C:/Users/Harshita Jain/Desktop/SMS_Spam_Dataset.csv", stringsAsFactors = F)
+str(Spam_SMS)
+```
+
+## Clean the data. 
+
+```{r}
+#Remove Null Columns.
+Spam_SMS$X <- NULL
+Spam_SMS$X.1 <- NULL
+Spam_SMS$X.2 <- NULL
+
+#Assign ppropriate names to th columns.
+names(Spam_SMS) <- c("Message_Label","Message")
+levels(as.factor(Spam_SMS$Message_Label))
+```
+
+```{r}
+#Assign appropriate names to the data entries under Column "Message_Label"
+Spam_SMS$Message_Label[Spam_SMS$Message_Label == "ham"] <- "Legitimate"
+Spam_SMS$Message_Label[Spam_SMS$Message_Label == "spam"] <- "Spam"
+
+
+Spam_SMS$Message_Label <- factor(Spam_SMS$Message_Label)
+```
+
+##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
+```{r}
+library(tm)
+library(SnowballC)
+BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
+
+#To perform transformations on words to make them converted to lower case, remove punctuation and white space, stopwords and to perform stemming. 
+FinalData = TermDocumentMatrix(BagOfWords, 
+                       control = list(tolower = TRUE,
+                                      removePunctuation = TRUE, 
+                                      PlainTextDocument = TRUE,
+                                      stopwords =  TRUE, 
+                                      stripWhitespace = TRUE, stemDocument = TRUE)) 
+```
+
+
+```{r}
+#To make a document-term matrix to record the frequency of all terms that are there in the whole collection.  
+FrequencyOfTerms <- DocumentTermMatrix(BagOfWords)
+
+#To find those terms that appear atleast 300 times in the collection.
+findFreqTerms(frequencies, lowfreq = 300)
+```
+
+```{r}
+
+sparseWords <- removeSparseTerms(FrequencyOfTerms, 0.995)
+
+#To convert matrix of sparse words into a data frame.
+sparseWords <- as.data.frame(as.matrix(sparseWords))
+
+colnames(sparseWords) <- make.names(colnames(sparseWords))
+
+str(sparseWords)
+```
+
+```{r}
+sparseWords$Label <- Spam_SMS$Message_Label
+```
+
+```{r}
+set.seed(987)
+
+#SMS <- sample(2, nrow(sparseWords), replace=TRUE, prob=c(0.75, 0.25))
+#train_data <- sparseWords[SMS==1,]
+#test_data <- sparseWords[SMS==2,]
+library(caTools)
+# Split the data into 75% training and 25% test data.
+split <- sample.split(sparseWords$Label, SplitRatio = 0.75)
+train_data <- subset(sparseWords, split == T)
+test_data <- subset(sparseWords, split == F)
+```
+
+```{r}
+
+library(rpart)
+library(rpart.plot)
+
+#To build a recursive partitioning  tree.
+Decision_Tree_Formula <- rpart(Label ~ ., data = train_data, method = "class", minbucket = 35)
+
+prp(Decision_Tree_Formula)
+
+ 
+```
+
+
+```{r}
+#To apply the above created model on test data.
+Decision_Tree_Test_Model <- predict(Decision_Tree_Formula, test_data, type = "class")
+table(test_data$Label, Decision_Tree_Test_Model)
+
+rpart.accuracy.table <- as.data.frame(table(test_data$Label, Decision_Tree_Test_Model))
+print(paste("Accuracy for Decision Tree is:",
+            100*round(((rpart.accuracy.table$Freq[1]+rpart.accuracy.table$Freq[4])/nrow(test_data)), 4),
+            "%"))
+```
+
+
+
+##SVM
+
+```{r}
+library(e1071)
+
+#To build a Support Vetor Model for this dataset.
+Support_Vector_Machine_Formula <- svm(Label ~ ., data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
+```
+
+```{r}
+#To apply the above created model on test data.
+Support_Vector_Machine_Test <- predict(Support_Vector_Machine_Formula, test_data)
+table(test_data$Label, Support_Vector_Machine_Test)
+
+svm.accuracy.table <- as.data.frame(table(test_data$Label, Support_Vector_Machine_Test))
+print(paste("Accuracy for SVM is:",
+            100*round(((svm.accuracy.table$Freq[1]+svm.accuracy.table$Freq[4])/nrow(test_data)), 4),
+            "%"))
+
+```
+
+## Logistic regression
+
+```{r}
+#To build a Support Vetor Model for this dataset.
+Logistic_Regression_Formula <- glm(Label ~ ., data = train_data, family = "binomial")
+
+#To apply the above created model on test data.
+Logistic_Regression_Test <- predict(Logistic_Regression_Formula, test_data, type = "response")
+
+
+library(ROCR)
+Logistic_Regression_ROCR_Curve <- prediction(Logistic_Regression_Test, test_data$Label)
+print(Logistic_Regression_AUC <- as.numeric(performance(Logistic_Regression_ROCR_Curve,"auc")@y.values))
+```
+
+```{r}
+Logistic_Regression_Prediction <- prediction(abs(Logistic_Regression_Test), test_data$Label)
+Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
+plot(Logistic_Regression_Performance)
+```
+
+```{r}
+table(test_data$Label, Logistic_Regression_Test > 0.75)
+glm.accuracy.table <- as.data.frame(table(test_data$Label, Logistic_Regression_Test > 0.75))
+print(paste("Accuracy of Logistic Regression is:",
+            100*round(((glm.accuracy.table$Freq[1]+glm.accuracy.table$Freq[4])/nrow(test_data)), 4),
+            "%"))
+```
