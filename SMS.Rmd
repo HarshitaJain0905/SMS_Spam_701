@@ -29,20 +29,41 @@ Spam_SMS$X <- NULL
 Spam_SMS$X.1 <- NULL
 Spam_SMS$X.2 <- NULL
 
-#Assign ppropriate names to th columns.
-names(Spam_SMS) <- c("Message_Label","Message")
-levels(as.factor(Spam_SMS$Message_Label))
+#Assign appropriate names to the columns.
+names(Spam_SMS) <- c("MessageLabel","Message")
+
+#Check if there exists any other NULL values in the dataset.
+colSums(is.na(Spam_SMS))
+
+#Convert class into factor.
+levels(as.factor(Spam_SMS$MessageLabel))
+
+#Assign appropriate names to the data entries under Column "Message_Label"
+Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "ham"] <- "Legitimate"
+Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "spam"] <- "Spam"
+
+#Convert class into factor.
+Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ```
+##Explore the data
 
 ```{r}
-#Assign appropriate names to the data entries under Column "Message_Label"
-Spam_SMS$Message_Label[Spam_SMS$Message_Label == "ham"] <- "Legitimate"
-Spam_SMS$Message_Label[Spam_SMS$Message_Label == "spam"] <- "Spam"
+#Explore the distribution of different contents (Legitimate and Spam) of the column MessageLabel
+prop.table(table(Spam_SMS$MessageLabel))
 
+#To know the length of each text so as to be able to explore the data more.
+Spam_SMS$MessageLength <- nchar(Spam_SMS$Message)
+summary(Spam_SMS$MessageLength)
 
-Spam_SMS$Message_Label <- factor(Spam_SMS$Message_Label)
+#Plot the distribution of Legitimate and Spammessages v/s the Message Length.
+library(ggplot2)
+
+ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
+  theme_bw() +
+  geom_histogram(binwidth = 5) +
+  labs(y = "Number of Messages", x = "Length of Message",
+       title = "Distribution of Message Lengths with Class Labels")
 ```
-
 ##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
 library(tm)
