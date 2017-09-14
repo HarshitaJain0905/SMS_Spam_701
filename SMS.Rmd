@@ -48,22 +48,187 @@ Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ##Explore the data
 
 ```{r}
-#Explore the distribution of different contents (Legitimate and Spam) of the column MessageLabel
-prop.table(table(Spam_SMS$MessageLabel))
+#Explore the distribution of Legitimate and Spam messages.
+library(dplyr)
+Distribution <- tally(group_by(Spam_SMS, MessageLabel))
+names(Distribution) <- c("Label", "Total")
+Distribution$Percentage <- (Distribution$Total)/(sum(Distribution$Total))
+
+#Plot the distribution
+library(ggplot2)
+ggplot(count, aes(x = Label, fill = Percentage)) + theme_bw() + geom_bar() + labs(y = "Percentage Distribution", x = "Message Label", title = "Distribution of Message Labels")
+```
+```{r}
 
 #To know the length of each text so as to be able to explore the data more.
 Spam_SMS$MessageLength <- nchar(Spam_SMS$Message)
 summary(Spam_SMS$MessageLength)
 
 #Plot the distribution of Legitimate and Spammessages v/s the Message Length.
-library(ggplot2)
-
 ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
   theme_bw() +
   geom_histogram(binwidth = 5) +
   labs(y = "Number of Messages", x = "Length of Message",
        title = "Distribution of Message Lengths with Class Labels")
 ```
+## To convert all the tokens to lower case. Post that, I will run for loops for few words to see if these words are correctly assigned 'y' or 'n' for each message in the dataset. ('y' and 'n' correspond to availability of that word in a particular SMS.) 
+```{r}
+library(stringr)
+
+#Transformation of all tokens to lower case.
+Spam_SMS$Message %<>% str_to_lower()
+Spam_SMS$free <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "free")  == TRUE){
+    Spam_SMS$free[i] <- "y"
+  }
+}
+
+Spam_SMS$winner <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "winner")  == TRUE){
+    Spam_SMS$winner[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "win")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "won")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "award")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
+    }
+    if(str_detect(Spam_SMS$Message[i], "selected")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
+  }
+}
+
+Spam_SMS$congratulation <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "congrats")  == TRUE){
+    Spam_SMS$congratulation[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "congratulations")  == TRUE){
+    Spam_SMS$congratulation[i] <- "y"
+  }
+}
+
+Spam_SMS$adult <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "xxx")  == TRUE){
+    Spam_SMS$adult[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "babe")  == TRUE){
+    Spam_SMS$adult[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "naked")  == TRUE){
+    Spam_SMS$adult[i] <- "y"
+  }
+    if(str_detect(Spam_SMS$Message[i], "dirty")  == TRUE){
+    Spam_SMS$adult[i] <- "y"
+    }
+    if(str_detect(Spam_SMS$Message[i], "flirty")  == TRUE){
+    Spam_SMS$adult[i] <- "y"
+    }
+}
+
+Spam_SMS$attention <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "urgent")  == TRUE){
+    Spam_SMS$attention[i] <- "y"
+  }
+    if(str_detect(Spam_SMS$Message[i], "attention")  == TRUE){
+    Spam_SMS$attention[i] <- "y"
+    }
+    if(str_detect(Spam_SMS$Message[i], "bonus")  == TRUE){
+    Spam_SMS$attention[i] <- "y"
+      }
+    if(str_detect(Spam_SMS$Message[i], "immediately")  == TRUE){
+    Spam_SMS$attention[i] <- "y"
+  }
+}
+
+Spam_SMS$ringtone  <- "n"
+for(i in 1:nrow(Spam_SMS)){
+  if(str_detect(Spam_SMS$Message[i], "ringtone")  == TRUE){
+    Spam_SMS$ringtone[i] <- "y"
+  }
+}
+```
+
+
+## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model.
+```{r}
+#Random number generation using set.seed of 1234.
+set.seed(1234)
+
+#Splitting the data into training data and test data.
+SMS <- sample(2, nrow(Spam_SMS), replace=TRUE, prob=c(0.7, 0.3))
+train_data <- Spam_SMS[SMS==1,]
+test_data <- Spam_SMS[SMS==2,]
+
+#To build a recursive partitioning decision tree.
+library(rpart)
+library(rpart.plot)
+SMS_Rpart <- rpart(formula = MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, method = "class")
+
+rpart.plot(SMS_Rpart, type = 4, fallen.leaves = FALSE, extra = 4)
+```
+##This tree reveals that out of all these tokens, the most important token is 'free' and the least important ones being 'adult, ringtone and congratulation'.
+```{r}
+summary(SMS_Rpart)
+```
+##Applying Random Forest to plot the importance of each token.
+```{r}
+library(randomForest)
+
+train_data$MessageLabel %<>% as.factor()
+train_data$Message  %<>% as.character()
+train_data$free %<>% as.factor()
+train_data$winner %<>% as.factor()
+train_data$congratulation %<>% as.factor()
+train_data$adult  %<>% as.factor()
+train_data$attention   %<>% as.factor()
+train_data$ringtone %<>% as.factor()
+
+#Applying the formula for Random Forest Algorithm
+SMS_RF <- MessageLabel ~ free + winner + congratulation + adult + attention + ringtone
+RFSpam_Tree <- randomForest(SMS_RF, data = train_data, ntree=25, proximity = T)
+
+#To plot the Variable Importance Plot.
+ImportancePlot <- varImpPlot(RFSpam_Tree, main = "Importance of each Token") 
+
+```
+This plot also expresses that the most important token aongst all is 'free', and the least important are 'adult, congratulation and ringtone'.
+
+```{r}
+#Importance of each token in a tabular form.
+importance(RFSpam_Tree)
+```
+
+#To test the above Random Forest Model on test data and check the prediction percentage.
+```{r}
+test_data$MessageLabel %<>% as.factor()
+test_data$Message  %<>% as.character()
+test_data$free %<>% as.factor()
+test_data$winner %<>% as.factor()
+test_data$congratulation %<>% as.factor()
+test_data$adult  %<>% as.factor()
+test_data$attention   %<>% as.factor()
+test_data$ringtone %<>% as.factor()
+
+
+RFTest <- predict(RFSpam_Tree, newdata =test_data)
+TestPredictionTable <- table(RFTest, test_data$MessageLabel)
+print(TestPredictionTable)
+```
+##Prediction percentage for test data.
+```{r}
+TestPredictability <- sum(RFTest == test_data$MessageLabel)/ length(test_data$MessageLabel)*100
+message("Predcitibility Percentage for Test Data is:")
+print(TestPredictability)
+```
+
 ##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
 library(tm)
