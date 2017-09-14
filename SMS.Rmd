@@ -56,7 +56,7 @@ Distribution$Percentage <- (Distribution$Total)/(sum(Distribution$Total))
 
 #Plot the distribution
 library(ggplot2)
-ggplot(count, aes(x = Label, fill = Percentage)) + theme_bw() + geom_bar() + labs(y = "Percentage Distribution", x = "Message Label", title = "Distribution of Message Labels")
+ggplot(Distribution, aes(x = Label, fill = Percentage)) + theme_bw() + geom_bar() + labs(y = "Percentage Distribution", x = "Message Label", title = "Distribution of Message Labels")
 ```
 ```{r}
 
@@ -74,6 +74,7 @@ ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
 ## To convert all the tokens to lower case. Post that, I will run for loops for few words to see if these words are correctly assigned 'y' or 'n' for each message in the dataset. ('y' and 'n' correspond to availability of that word in a particular SMS.) 
 ```{r}
 library(stringr)
+library(magrittr)
 
 #Transformation of all tokens to lower case.
 Spam_SMS$Message %<>% str_to_lower()
@@ -228,11 +229,31 @@ TestPredictability <- sum(RFTest == test_data$MessageLabel)/ length(test_data$Me
 message("Predcitibility Percentage for Test Data is:")
 print(TestPredictability)
 ```
+##Producing Heatmap for the above model.
+```{r}
+library(caret)
+#Converting table for 70-30 split regime into a data frame.
+RFSpam_Tree_Table <- as.data.frame(table(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel))
 
+#Normalizing data between 0 and 1 using Min-Max Normalization. 
+Normalized = (RFSpam_Tree_Table$Freq-min(RFSpam_Tree_Table$Freq))/(max(RFSpam_Tree_Table$Freq) - min(RFSpam_Tree_Table$Freq))
+#Replacing data of Freq column with Normalized data.
+RFSpam_Tree_Table[,"Freq"] <- Normalized
+
+# ggplotting the contents of table of 70-30 split regime into Heatmap.
+Heatmap <- ggplot(RFSpam_Tree_Table)
+
+#Final Plotting step
+Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_discrete(name="Reference Class",  position = "top") + scale_y_discrete(name="Predicted Class", limits = rev(levels(RFSpam_Tree_Table$Var1))) + scale_fill_gradient(breaks=seq(from=-.5, to=4, by=.25), low = "white", high = "steelblue") + labs(fill="Normalized\nFrequency")
+
+
+```
 ##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
 library(tm)
 library(SnowballC)
+library(wordcloud)
+
 BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
 
 #To perform transformations on words to make them converted to lower case, remove punctuation and white space, stopwords and to perform stemming. 
@@ -242,6 +263,8 @@ FinalData = TermDocumentMatrix(BagOfWords,
                                       PlainTextDocument = TRUE,
                                       stopwords =  TRUE, 
                                       stripWhitespace = TRUE, stemDocument = TRUE)) 
+
+wordcloud(BagOfWords, max.words = 100, random.order = FALSE)
 ```
 
 
