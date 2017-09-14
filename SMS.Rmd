@@ -1,8 +1,8 @@
 ---
 title: "SMS"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -253,6 +253,7 @@ Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_
 library(tm)
 library(SnowballC)
 library(wordcloud)
+library(RColorBrewer)
 
 BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
 
@@ -263,8 +264,8 @@ FinalData = TermDocumentMatrix(BagOfWords,
                                       PlainTextDocument = TRUE,
                                       stopwords =  TRUE, 
                                       stripWhitespace = TRUE, stemDocument = TRUE)) 
-
-wordcloud(BagOfWords, max.words = 100, random.order = FALSE)
+pal = brewer.pal(6,"Dark2")
+wordcloud(BagOfWords, max.words = 100, random.order = FALSE, scale=c(8,.3), colors = pal)
 ```
 
 
