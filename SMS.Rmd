@@ -265,21 +265,22 @@ FinalData = TermDocumentMatrix(BagOfWords,
                                       stopwords =  TRUE, 
                                       stripWhitespace = TRUE, stemDocument = TRUE)) 
 pal = brewer.pal(6,"Dark2")
-wordcloud(BagOfWords, max.words = 100, random.order = FALSE, scale=c(8,.3), colors = pal)
+wordcloud(BagOfWords, max.words = 300, random.order = FALSE, scale=c(8,.3), colors = pal)
 ```
 
 
 ```{r}
+
 #To make a document-term matrix to record the frequency of all terms that are there in the whole collection.  
 FrequencyOfTerms <- DocumentTermMatrix(BagOfWords)
 
 #To find those terms that appear atleast 300 times in the collection.
-findFreqTerms(frequencies, lowfreq = 300)
+findFreqTerms(FinalData, lowfreq = 300)
 ```
 
 ```{r}
 
-sparseWords <- removeSparseTerms(FrequencyOfTerms, 0.995)
+sparseWords <- removeSparseTerms(FinalData, 0.995)
 
 #To convert matrix of sparse words into a data frame.
 sparseWords <- as.data.frame(as.matrix(sparseWords))
@@ -333,21 +334,32 @@ print(paste("Accuracy for Decision Tree is:",
 
 
 
-##SVM
-
+##Train Support Vector Machine
 ```{r}
 library(e1071)
 
-#To build a Support Vetor Model for this dataset.
-Support_Vector_Machine_Formula <- svm(Label ~ ., data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
+SMS_SVM <- svm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
+SVMTest <- predict(SMS_SVM, test_data)
+
+confusionMatrix(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)
+```
+
+##Producing heatmaps for the above confusion matrix.
+```{r}
+SVM_Tree <- as.data.frame(table(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)) 
+#Normalizing data between 0 and 1 using Min-Max Normalization. 
+Normalized = (SVM_Tree$Freq-min(SVM_Tree$Freq))/(max(SVM_Tree$Freq) - min(SVM_Tree$Freq))
+#Replacing data of Freq column with Normalized data.
+SVM_Tree[,"Freq"] <- Normalized
+#ggplotting the contents of table of 70-30 split regime into Heatmap.
+Heatmap <- ggplot(SVM_Tree)
+ 
+#Final Plotting step
+Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_discrete(name="Reference Class",  position = "top") + scale_y_discrete(name="Predicted Class", limits = rev(levels(SVM_Tree$Var1))) + scale_fill_gradient(breaks=seq(from=-.5, to=4, by=.25), low = "white", high = "steelblue") + labs(fill="Normalized\nFrequency")
 ```
 
 ```{r}
-#To apply the above created model on test data.
-Support_Vector_Machine_Test <- predict(Support_Vector_Machine_Formula, test_data)
-table(test_data$Label, Support_Vector_Machine_Test)
-
-svm.accuracy.table <- as.data.frame(table(test_data$Label, Support_Vector_Machine_Test))
+svm.accuracy.table <- as.data.frame(table(test_data$MessageLabel, SVMTest))
 print(paste("Accuracy for SVM is:",
             100*round(((svm.accuracy.table$Freq[1]+svm.accuracy.table$Freq[4])/nrow(test_data)), 4),
             "%"))
@@ -357,27 +369,24 @@ print(paste("Accuracy for SVM is:",
 ## Logistic regression
 
 ```{r}
-#To build a Support Vetor Model for this dataset.
-Logistic_Regression_Formula <- glm(Label ~ ., data = train_data, family = "binomial")
+SMS_GLM <- glm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, family = "binomial")
+GLMTest <- predict(SMS_GLM, test_data)
 
-#To apply the above created model on test data.
-Logistic_Regression_Test <- predict(Logistic_Regression_Formula, test_data, type = "response")
+#confusionMatrix(predict(SMS_GLM, newdata = test_data), test_data$MessageLabel)
 
 
-library(ROCR)
-Logistic_Regression_ROCR_Curve <- prediction(Logistic_Regression_Test, test_data$Label)
-print(Logistic_Regression_AUC <- as.numeric(performance(Logistic_Regression_ROCR_Curve,"auc")@y.values))
 ```
 
 ```{r}
-Logistic_Regression_Prediction <- prediction(abs(Logistic_Regression_Test), test_data$Label)
+library(ROCR)
+Logistic_Regression_Prediction <- prediction(abs(GLMTest), test_data$MessageLabel)
 Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
 plot(Logistic_Regression_Performance)
 ```
 
 ```{r}
-table(test_data$Label, Logistic_Regression_Test > 0.75)
-glm.accuracy.table <- as.data.frame(table(test_data$Label, Logistic_Regression_Test > 0.75))
+#table(test_data$Label, Logistic_Regression_Test > 0.75)
+glm.accuracy.table <- as.data.frame(table(test_data$MessageLabel, GLMTest > 0.75))
 print(paste("Accuracy of Logistic Regression is:",
             100*round(((glm.accuracy.table$Freq[1]+glm.accuracy.table$Freq[4])/nrow(test_data)), 4),
             "%"))
