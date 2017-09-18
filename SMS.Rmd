@@ -1,8 +1,9 @@
 ---
 title: "SMS"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -58,12 +59,15 @@ Distribution$Percentage <- (Distribution$Total)/(sum(Distribution$Total))
 library(ggplot2)
 ggplot(Distribution, aes(x = Label, fill = Percentage)) + theme_bw() + geom_bar() + labs(y = "Percentage Distribution", x = "Message Label", title = "Distribution of Message Labels")
 ```
+
 ```{r}
 
 #To know the length of each text so as to be able to explore the data more.
 Spam_SMS$MessageLength <- nchar(Spam_SMS$Message)
 summary(Spam_SMS$MessageLength)
+```
 
+```{r}
 #Plot the distribution of Legitimate and Spammessages v/s the Message Length.
 ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
   theme_bw() +
@@ -71,6 +75,7 @@ ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
   labs(y = "Number of Messages", x = "Length of Message",
        title = "Distribution of Message Lengths with Class Labels")
 ```
+
 ## To convert all the tokens to lower case. Post that, I will run for loops for few words to see if these words are correctly assigned 'y' or 'n' for each message in the dataset. ('y' and 'n' correspond to availability of that word in a particular SMS.) 
 ```{r}
 library(stringr)
@@ -157,16 +162,53 @@ for(i in 1:nrow(Spam_SMS)){
 }
 ```
 
-
-## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model.
+##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(RColorBrewer)
+library(magrittr)
+
+BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
+
+#To clean corpus.
+Clean_BagOfWords <- BagOfWords %>%
+                    tm_map(content_transformer(tolower)) %>% #Transofrm to lower case
+                    tm_map(removeNumbers) %>%                #Clean by removing numbers
+                    tm_map(removeWords, stopwords(kind="en")) %>% #Clean by removing stopwords
+                    tm_map(removePunctuation) %>%            #Clean by removing punctuation
+                    tm_map(stripWhitespace)                  #Clean by tokenising by striping white space
+
+#Transform corpus into matrix.
+TDM = TermDocumentMatrix(Clean_BagOfWords) 
+
+#Using Wordcloud to see frequent words. More the word is frequent, larger the font will be for it. 
+pal = brewer.pal(6,"Dark2")
+wordcloud(BagOfWords, max.words = 75, random.order = FALSE, scale=c(8,.3), colors = pal)
+```
+
+## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
+```{r}
+library(lattice)
+library(caret)
 #Random number generation using set.seed of 1234.
 set.seed(1234)
 
-#Splitting the data into training data and test data.
-SMS <- sample(2, nrow(Spam_SMS), replace=TRUE, prob=c(0.7, 0.3))
-train_data <- Spam_SMS[SMS==1,]
-test_data <- Spam_SMS[SMS==2,]
+#To create a split formula using which I would split the data into train and test sets.
+Split_Formula <- createDataPartition(Spam_SMS$MessageLabel, p=0.7, list=FALSE)
+
+#To split Spam_SMS into training and test sets.
+train_data <- Spam_SMS[Split_Formula,]
+test_data <- Spam_SMS[-Split_Formula,]
+
+#To split corpus into training and test data.
+Corpus_train_data <- Clean_BagOfWords[Split_Formula]
+Corpus_test_data <- Clean_BagOfWords[-Split_Formula]
+
+#To split Term Document Matrix into training and test data.
+TDM_train_data <- TDM[Split_Formula,]
+TDM_test_data <- TDM[-Split_Formula,]
 
 #To build a recursive partitioning decision tree.
 library(rpart)
@@ -231,6 +273,7 @@ print(TestPredictability)
 ```
 ##Producing Heatmap for the above model.
 ```{r}
+library(lattice)
 library(caret)
 #Converting table for 70-30 split regime into a data frame.
 RFSpam_Tree_Table <- as.data.frame(table(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel))
@@ -247,89 +290,6 @@ Heatmap <- ggplot(RFSpam_Tree_Table)
 Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_discrete(name="Reference Class",  position = "top") + scale_y_discrete(name="Predicted Class", limits = rev(levels(RFSpam_Tree_Table$Var1))) + scale_fill_gradient(breaks=seq(from=-.5, to=4, by=.25), low = "white", high = "steelblue") + labs(fill="Normalized\nFrequency")
 
 
-```
-##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
-```{r}
-library(tm)
-library(SnowballC)
-library(wordcloud)
-library(RColorBrewer)
-
-BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
-
-#To perform transformations on words to make them converted to lower case, remove punctuation and white space, stopwords and to perform stemming. 
-FinalData = TermDocumentMatrix(BagOfWords, 
-                       control = list(tolower = TRUE,
-                                      removePunctuation = TRUE, 
-                                      PlainTextDocument = TRUE,
-                                      stopwords =  TRUE, 
-                                      stripWhitespace = TRUE, stemDocument = TRUE)) 
-pal = brewer.pal(6,"Dark2")
-wordcloud(BagOfWords, max.words = 300, random.order = FALSE, scale=c(8,.3), colors = pal)
-```
-
-
-```{r}
-
-#To make a document-term matrix to record the frequency of all terms that are there in the whole collection.  
-FrequencyOfTerms <- DocumentTermMatrix(BagOfWords)
-
-#To find those terms that appear atleast 300 times in the collection.
-findFreqTerms(FinalData, lowfreq = 300)
-```
-
-```{r}
-
-sparseWords <- removeSparseTerms(FinalData, 0.995)
-
-#To convert matrix of sparse words into a data frame.
-sparseWords <- as.data.frame(as.matrix(sparseWords))
-
-colnames(sparseWords) <- make.names(colnames(sparseWords))
-
-str(sparseWords)
-```
-
-```{r}
-sparseWords$Label <- Spam_SMS$Message_Label
-```
-
-```{r}
-set.seed(987)
-
-#SMS <- sample(2, nrow(sparseWords), replace=TRUE, prob=c(0.75, 0.25))
-#train_data <- sparseWords[SMS==1,]
-#test_data <- sparseWords[SMS==2,]
-library(caTools)
-# Split the data into 75% training and 25% test data.
-split <- sample.split(sparseWords$Label, SplitRatio = 0.75)
-train_data <- subset(sparseWords, split == T)
-test_data <- subset(sparseWords, split == F)
-```
-
-```{r}
-
-library(rpart)
-library(rpart.plot)
-
-#To build a recursive partitioning  tree.
-Decision_Tree_Formula <- rpart(Label ~ ., data = train_data, method = "class", minbucket = 35)
-
-prp(Decision_Tree_Formula)
-
- 
-```
-
-
-```{r}
-#To apply the above created model on test data.
-Decision_Tree_Test_Model <- predict(Decision_Tree_Formula, test_data, type = "class")
-table(test_data$Label, Decision_Tree_Test_Model)
-
-rpart.accuracy.table <- as.data.frame(table(test_data$Label, Decision_Tree_Test_Model))
-print(paste("Accuracy for Decision Tree is:",
-            100*round(((rpart.accuracy.table$Freq[1]+rpart.accuracy.table$Freq[4])/nrow(test_data)), 4),
-            "%"))
 ```
 
 
@@ -390,4 +350,42 @@ glm.accuracy.table <- as.data.frame(table(test_data$MessageLabel, GLMTest > 0.75
 print(paste("Accuracy of Logistic Regression is:",
             100*round(((glm.accuracy.table$Freq[1]+glm.accuracy.table$Freq[4])/nrow(test_data)), 4),
             "%"))
+```
+
+##Naive Bayes Classifier
+```{r}
+#Retain words which appear in 5 or more than 5 SMS messages.
+Frequent_Terms = findFreqTerms(TDM_train_data, 5)
+TDM_train_data_New = DocumentTermMatrix(Corpus_train_data, list(dictionary=Frequent_Terms))
+TDM_test_data_New =  DocumentTermMatrix(Corpus_test_data, list(dictionary=Frequent_Terms))
+```
+
+```{r}
+#To write a fucntion to convert numerics in TDms to factors of yes/no.
+Convert_Numerics_To_Factors = function(num) 
+  {
+  num = ifelse(num > 0, 1, 0)
+  num = factor(num, levels = c(0, 1), labels=c("No", "Yes"))
+  return (num)
+  }
+
+#Apply above fucntion to the new TDM train and test datasets.
+TDM_train_data_New = apply(TDM_train_data_New, MARGIN=2, Convert_Numerics_To_Factors)
+TDM_test_data_New  = apply(TDM_test_data_New, MARGIN=2, Convert_Numerics_To_Factors)
+```
+
+```{r}
+#Train a Naive Bayes Model.
+
+library(e1071)
+# store our model in sms_classifier
+SMS_NB = naiveBayes(MessageLabel ~., data = train_data, laplace = 1)
+SMS_NB_Test = predict(SMS_NB, TDM_test_data_New)
+
+
+library(gmodels)
+CrossTable(SMS_NB_Test, test_data$MessageLabel, 
+           prop.chisq = FALSE, 
+           prop.t = FALSE, 
+           dnn = c("predicted", "actual")) #Name of column
 ```
