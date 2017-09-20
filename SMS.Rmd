@@ -18,7 +18,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ## To download the dataset.
 ```{r}
-Spam_SMS <- read.csv("C:/Users/Harshita Jain/Desktop/SMS_Spam_Dataset.csv", stringsAsFactors = F)
+Spam_SMS <- read.csv("./SMS_Spam_Dataset.csv", stringsAsFactors = F)
 str(Spam_SMS)
 ```
 
@@ -49,15 +49,13 @@ Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ##Explore the data
 
 ```{r}
-#Explore the distribution of Legitimate and Spam messages.
-library(dplyr)
-Distribution <- tally(group_by(Spam_SMS, MessageLabel))
-names(Distribution) <- c("Label", "Total")
-Distribution$Percentage <- (Distribution$Total)/(sum(Distribution$Total))
-
-#Plot the distribution
 library(ggplot2)
-ggplot(Distribution, aes(x = Label, fill = Percentage)) + theme_bw() + geom_bar() + labs(y = "Percentage Distribution", x = "Message Label", title = "Distribution of Message Labels")
+#Explore the distribution of Legitimate and Spam messages.
+Distribution <- table(Spam_SMS$MessageLabel)
+
+Percentage <- as.vector(Distribution)/nrow(Spam_SMS)
+
+ggplot(data = Spam_SMS,aes(x=MessageLabel, colour = (..count..)/sum(..count..) )) + geom_bar(aes(y = (..count..)/sum(..count..)*100)) + ylab("Percentage") + xlab("Label") + ylim(0,100) + labs(colour = "Percentage", title = "Percentage of Legitimate and Spam Messages")
 ```
 
 ```{r}
@@ -182,10 +180,6 @@ Clean_BagOfWords <- BagOfWords %>%
 
 #Transform corpus into matrix.
 TDM = TermDocumentMatrix(Clean_BagOfWords) 
-
-#Using Wordcloud to see frequent words. More the word is frequent, larger the font will be for it. 
-pal = brewer.pal(6,"Dark2")
-wordcloud(BagOfWords, max.words = 75, random.order = FALSE, scale=c(8,.3), colors = pal)
 ```
 
 ## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
@@ -209,7 +203,30 @@ Corpus_test_data <- Clean_BagOfWords[-Split_Formula]
 #To split Term Document Matrix into training and test data.
 TDM_train_data <- TDM[Split_Formula,]
 TDM_test_data <- TDM[-Split_Formula,]
+```
 
+##Producing Wordclouds
+```{r}
+#Using Wordcloud to see frequent words. More the word is frequent, larger the font will be for it. 
+pal = brewer.pal(6,"Dark2")
+wordcloud(BagOfWords, max.words = 75, random.order = FALSE, scale=c(8,.3), colors = pal)
+```
+
+```{r}
+#Producing separate wordclouds for Legitimate and Spam messages of train_data.
+Spam <- subset(train_data, MessageLabel == "Spam")
+Legitimate <- subset(train_data, MessageLabel == "Legitimate")
+
+#Wordcloud for Spam
+wordcloud(Spam$Message, max.words = 30, scale=c(3, 0, 5), colors = pal)
+```
+
+```{r}
+#Wordcloud for Legitimate
+wordcloud(Legitimate$Message, max.words = 30, scale=c(3, 0, 5), colors = pal)
+```
+
+```{r}
 #To build a recursive partitioning decision tree.
 library(rpart)
 library(rpart.plot)
@@ -331,10 +348,6 @@ print(paste("Accuracy for SVM is:",
 ```{r}
 SMS_GLM <- glm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, family = "binomial")
 GLMTest <- predict(SMS_GLM, test_data)
-
-#confusionMatrix(predict(SMS_GLM, newdata = test_data), test_data$MessageLabel)
-
-
 ```
 
 ```{r}
@@ -380,11 +393,11 @@ TDM_test_data_New  = apply(TDM_test_data_New, MARGIN=2, Convert_Numerics_To_Fact
 library(e1071)
 # store our model in sms_classifier
 SMS_NB = naiveBayes(MessageLabel ~., data = train_data, laplace = 1)
-SMS_NB_Test = predict(SMS_NB, TDM_test_data_New)
+SMS_NBTest = predict(SMS_NB, TDM_test_data_New)
 
 
 library(gmodels)
-CrossTable(SMS_NB_Test, test_data$MessageLabel, 
+CrossTable(SMS_NBTest, test_data$MessageLabel, 
            prop.chisq = FALSE, 
            prop.t = FALSE, 
            dnn = c("predicted", "actual")) #Name of column
