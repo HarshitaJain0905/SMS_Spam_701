@@ -158,6 +158,131 @@ for(i in 1:nrow(Spam_SMS)){
     Spam_SMS$ringtone[i] <- "y"
   }
 }
+
+```
+
+##Plot bar graph depicting total number of messages with the value of these features being equal to "y".
+```{r}
+Spam_Features <- data.frame(Features = c("Free", "Adult", "Ringtone", "Congratulation", "Winner", "Attention"), Total = c(sum(Spam_SMS$free == "y"), sum(Spam_SMS$adult == "y"), sum(Spam_SMS$ringtone == "y"), sum(Spam_SMS$congratulation == "y"), sum(Spam_SMS$winner == "y"), sum(Spam_SMS$attention == "y")))
+
+ggplot(Spam_Features, aes(x = reorder(Features, -Total), y = Total)) + geom_bar(stat = "identity", fill = "steelblue") + geom_text(aes(label = Total), color = "red", vjust = 0) + xlab("Features")+ ylab("Total")
+```
+##Produce Venn Diagram to see how many SMS messages have combination of these features (double and triple feature combinations).
+```{r}
+library(futile.logger)
+library(VennDiagram)
+#I will start by computing the number of SMS messages having combination of two and/or three features. After having obtained these values, I will produce Venn Diagrams for these combinations.
+
+#For doubles
+
+#For Free and Adult
+Free_Adult <- sum(Spam_SMS$free == "y" & Spam_SMS$adult == "y")
+Free_Adult
+grid.newpage()
+draw.pairwise.venn(area1 = 265, area2 = 150, cross.area = 9, category = c("Free", 
+    "Adult"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Free and Ringtone
+Free_Ringtone <- sum(Spam_SMS$free == "y" & Spam_SMS$ringtone == "y")
+Free_Ringtone
+grid.newpage()
+draw.pairwise.venn(area1 = 265, area2 = 40, cross.area = 14, category = c("Free", 
+    "Ringtone"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Free and Congratulation
+Free_Congratulation <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y")
+Free_Congratulation
+grid.newpage()
+draw.pairwise.venn(area1 = 265, area2 = 34, cross.area = 9, category = c("Free", 
+    "Congratulation"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Free and Winner
+Free_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$winner == "y")
+Free_Winner
+grid.newpage()
+draw.pairwise.venn(area1 = 265, area2 = 368, cross.area = 39, category = c("Free", 
+    "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Free and Attention
+Free_Attention <- sum(Spam_SMS$free == "y" & Spam_SMS$attention == "y")
+Free_Attention
+grid.newpage()
+draw.pairwise.venn(area1 = 265, area2 = 85, cross.area = 3, category = c("Free", 
+    "Attention"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Adult and Winner
+Adult_Winner <- sum(Spam_SMS$adult == "y" & Spam_SMS$winner == "y")
+Adult_Winner
+grid.newpage()
+draw.pairwise.venn(area1 = 150, area2 = 368, cross.area = 8, category = c("Adult", 
+    "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Adult and Attention
+Adult_Attention <- sum(Spam_SMS$adult == "y" & Spam_SMS$attention == "y")
+Adult_Attention
+grid.newpage()
+draw.pairwise.venn(area1 = 150, area2 = 85, cross.area = 3, category = c("Adult", 
+    "Attention"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Congratulation and Winner
+congratulation_Winner <- sum(Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
+congratulation_Winner
+grid.newpage()
+draw.pairwise.venn(area1 = 34, area2 = 368, cross.area = 13, category = c("Congratulation", 
+    "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Attention and Winner
+Attention_Winner <- sum(Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
+Attention_Winner
+grid.newpage()
+draw.pairwise.venn(area1 = 85, area2 = 368, cross.area = 47, category = c("Attention", 
+    "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+```
+
+```{r}
+#For triplets
+
+#For free, congratulation and winner 
+Free_Congratulation_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
+Free_Congratulation_Winner
+grid.newpage()
+draw.triple.venn(area1 = 265, area2 = 34, area3 = 368, n12 = 9, n23 = 13, n13 = 39, 
+    n123 = 6, category = c("Free", "Congratulation", "Winner"), lty = "blank", 
+    fill = c("skyblue", "pink1", "mediumorchid"))
+
+#For free, attention and winner 
+Free_Attention_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
+Free_Attention_Winner
+grid.newpage()
+draw.triple.venn(area1 = 265, area2 = 85, area3 = 368, n12 = 3, n23 = 47, n13 = 39, 
+    n123 = 2, category = c("Free", "Attention", "Winner"), lty = "blank", 
+    fill = c("skyblue", "pink1", "mediumorchid"))
+
+#For adult, attention and winner 
+Adult_Attention_Winner <- sum(Spam_SMS$adult == "y" & Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
+Adult_Attention_Winner
+grid.newpage()
+draw.triple.venn(area1 = 150, area2 = 85, area3 = 368, n12 = 3, n23 = 47, n13 = 8, 
+    n123 = 3, category = c("Adult", "Attention", "Winner"), lty = "blank", 
+    fill = c("skyblue", "pink1", "mediumorchid"))
 ```
 
 ##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
@@ -397,7 +522,7 @@ SMS_NBTest = predict(SMS_NB, TDM_test_data_New)
 
 
 library(gmodels)
-CrossTable(SMS_NBTest, test_data$MessageLabel, 
+CT <- CrossTable(SMS_NBTest, test_data$MessageLabel, 
            prop.chisq = FALSE, 
            prop.t = FALSE, 
            dnn = c("predicted", "actual")) #Name of column
