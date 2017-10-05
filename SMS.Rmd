@@ -15,14 +15,21 @@ knitr::opts_chunk$set(echo = TRUE)
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#Import all the libraries
+```{r}
+libraries <- c("ggplot2", "stringr", "magrittr", "futile.logger", "VennDiagram", "tm", "SnowballC", "wordcloud", "RColorBrewer", "lattice", "caret", "rpart", "rpart.plot", "randomForest", "e1071", "ROCR", "gmodels")
 
-## To download the dataset.
+require(libraries)
+
+lapply(libraries, require, character.only = TRUE)
+```
+#Download the dataset.
 ```{r}
 Spam_SMS <- read.csv("./SMS_Spam_Dataset.csv", stringsAsFactors = F)
 str(Spam_SMS)
 ```
 
-## Clean the data. 
+#Clean the data. 
 
 ```{r}
 #Remove Null Columns.
@@ -33,7 +40,7 @@ Spam_SMS$X.2 <- NULL
 #Assign appropriate names to the columns.
 names(Spam_SMS) <- c("MessageLabel","Message")
 
-#Check if there exists any other NULL values in the dataset.
+#Check if any other NULL values exist in the dataset.
 colSums(is.na(Spam_SMS))
 
 #Convert class into factor.
@@ -46,16 +53,19 @@ Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "spam"] <- "Spam"
 #Convert class into factor.
 Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ```
-##Explore the data
+#Explore the data
 
 ```{r}
-library(ggplot2)
+#library(ggplot2)
 #Explore the distribution of Legitimate and Spam messages.
-Distribution <- table(Spam_SMS$MessageLabel)
+Distribution <- as.data.frame(table(Spam_SMS$MessageLabel))
 
-Percentage <- as.vector(Distribution)/nrow(Spam_SMS)
+Distribution$Percentage <- (Distribution$Freq/nrow(Spam_SMS))*100
+Distribution$Percentage <- round(Distribution$Percentage, digits = 2)
+names(Distribution) <- c("Label", "Total", "Percentage")
 
-ggplot(data = Spam_SMS,aes(x=MessageLabel, colour = (..count..)/sum(..count..) )) + geom_bar(aes(y = (..count..)/sum(..count..)*100)) + ylab("Percentage") + xlab("Label") + ylim(0,100) + labs(colour = "Percentage", title = "Percentage of Legitimate and Spam Messages")
+#Plot the Distribution.
+ggplot(Distribution, aes(x = Label, y = Percentage)) + geom_bar(stat= "identity", width = 0.5, fill = "dark green") + ylim(0,100) + labs(colour = "Percentage", title = "Distribution of Legitimate and Spam Messages") + geom_text(aes(label = Percentage), color = "red", vjust = 0) + xlab("Label")+ ylab("Percentage Value")
 ```
 
 ```{r}
@@ -73,11 +83,24 @@ ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
   labs(y = "Number of Messages", x = "Length of Message",
        title = "Distribution of Message Lengths with Class Labels")
 ```
+Split Raw SMS Data on Labels (Spam and Legitmate) and produce wordclouds for each.
 
+```{r}
+Spam_Raw <- subset(Spam_SMS, MessageLabel == "Spam")
+Legitimate_Raw <- subset(Spam_SMS, MessageLabel == "Legitimate")
+
+#Wordcloud for Spam_Raw
+pal = brewer.pal(6,"Dark2")
+wordcloud(Spam_Raw$Message, max.words = 30, scale=c(8, .3), colors = pal)
+```
+
+```{r}
+wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(5, .3), colors = pal)
+```
 ## To convert all the tokens to lower case. Post that, I will run for loops for few words to see if these words are correctly assigned 'y' or 'n' for each message in the dataset. ('y' and 'n' correspond to availability of that word in a particular SMS.) 
 ```{r}
-library(stringr)
-library(magrittr)
+#library(stringr)
+#library(magrittr)
 
 #Transformation of all tokens to lower case.
 Spam_SMS$Message %<>% str_to_lower()
@@ -163,17 +186,19 @@ for(i in 1:nrow(Spam_SMS)){
 
 ##Plot bar graph depicting total number of messages with the value of these features being equal to "y".
 ```{r}
+#For Unigrams
+
 Spam_Features <- data.frame(Features = c("Free", "Adult", "Ringtone", "Congratulation", "Winner", "Attention"), Total = c(sum(Spam_SMS$free == "y"), sum(Spam_SMS$adult == "y"), sum(Spam_SMS$ringtone == "y"), sum(Spam_SMS$congratulation == "y"), sum(Spam_SMS$winner == "y"), sum(Spam_SMS$attention == "y")))
 
 ggplot(Spam_Features, aes(x = reorder(Features, -Total), y = Total)) + geom_bar(stat = "identity", fill = "steelblue") + geom_text(aes(label = Total), color = "red", vjust = 0) + xlab("Features")+ ylab("Total")
 ```
-##Produce Venn Diagram to see how many SMS messages have combination of these features (double and triple feature combinations).
+##Produce Venn Diagram to see how many SMS messages have combination of these features (bigrams and trigrams feature combinations).
 ```{r}
-library(futile.logger)
-library(VennDiagram)
+#library(futile.logger)
+#library(VennDiagram)
 #I will start by computing the number of SMS messages having combination of two and/or three features. After having obtained these values, I will produce Venn Diagrams for these combinations.
 
-#For doubles
+#For bigrams
 
 #For Free and Adult
 Free_Adult <- sum(Spam_SMS$free == "y" & Spam_SMS$adult == "y")
@@ -258,7 +283,7 @@ draw.pairwise.venn(area1 = 85, area2 = 368, cross.area = 47, category = c("Atten
 ```
 
 ```{r}
-#For triplets
+#For trigrams
 
 #For free, congratulation and winner 
 Free_Congratulation_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
@@ -287,11 +312,11 @@ draw.triple.venn(area1 = 150, area2 = 85, area3 = 368, n12 = 3, n23 = 47, n13 = 
 
 ##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
-library(tm)
-library(SnowballC)
-library(wordcloud)
-library(RColorBrewer)
-library(magrittr)
+#library(tm)
+#library(SnowballC)
+#library(wordcloud)
+#library(RColorBrewer)
+#library(magrittr)
 
 BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
 
@@ -306,11 +331,12 @@ Clean_BagOfWords <- BagOfWords %>%
 #Transform corpus into matrix.
 TDM = TermDocumentMatrix(Clean_BagOfWords) 
 ```
+Preparing prediction models to classify SMS messages as Spam or Legitimate.
 
 ## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
 ```{r}
-library(lattice)
-library(caret)
+#library(lattice)
+#library(caret)
 #Random number generation using set.seed of 1234.
 set.seed(1234)
 
@@ -333,8 +359,7 @@ TDM_test_data <- TDM[-Split_Formula,]
 ##Producing Wordclouds
 ```{r}
 #Using Wordcloud to see frequent words. More the word is frequent, larger the font will be for it. 
-pal = brewer.pal(6,"Dark2")
-wordcloud(BagOfWords, max.words = 75, random.order = FALSE, scale=c(8,.3), colors = pal)
+wordcloud(Clean_BagOfWords, max.words = 75, random.order = FALSE, scale=c(5, .3), colors = pal)
 ```
 
 ```{r}
@@ -343,12 +368,12 @@ Spam <- subset(train_data, MessageLabel == "Spam")
 Legitimate <- subset(train_data, MessageLabel == "Legitimate")
 
 #Wordcloud for Spam
-wordcloud(Spam$Message, max.words = 30, scale=c(3, 0, 5), colors = pal)
+wordcloud(Spam$Message, max.words = 30, scale=c(7, .3), colors = pal)
 ```
 
 ```{r}
 #Wordcloud for Legitimate
-wordcloud(Legitimate$Message, max.words = 30, scale=c(3, 0, 5), colors = pal)
+wordcloud(Legitimate$Message, max.words = 30, scale=c(5, .3), colors = pal)
 ```
 
 ```{r}
@@ -365,7 +390,7 @@ summary(SMS_Rpart)
 ```
 ##Applying Random Forest to plot the importance of each token.
 ```{r}
-library(randomForest)
+#library(randomForest)
 
 train_data$MessageLabel %<>% as.factor()
 train_data$Message  %<>% as.character()
@@ -407,10 +432,15 @@ RFTest <- predict(RFSpam_Tree, newdata =test_data)
 TestPredictionTable <- table(RFTest, test_data$MessageLabel)
 print(TestPredictionTable)
 ```
+
+Confusion Matrix
+```{r}
+confusionMatrix(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel)
+```
 ##Prediction percentage for test data.
 ```{r}
 TestPredictability <- sum(RFTest == test_data$MessageLabel)/ length(test_data$MessageLabel)*100
-message("Predcitibility Percentage for Test Data is:")
+message("Predcitability Percentage for Test Data is:")
 print(TestPredictability)
 ```
 ##Producing Heatmap for the above model.
@@ -438,7 +468,7 @@ Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_
 
 ##Train Support Vector Machine
 ```{r}
-library(e1071)
+#library(e1071)
 
 SMS_SVM <- svm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
 SVMTest <- predict(SMS_SVM, test_data)
@@ -472,14 +502,17 @@ print(paste("Accuracy for SVM is:",
 
 ```{r}
 SMS_GLM <- glm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, family = "binomial")
-GLMTest <- predict(SMS_GLM, test_data)
+GLMTest <- predict(SMS_GLM, test_data, type = 'response')
+
+#Confusion Matrix
+table(test_data$MessageLabel, GLMTest > 0.5)
 ```
 
 ```{r}
 library(ROCR)
 Logistic_Regression_Prediction <- prediction(abs(GLMTest), test_data$MessageLabel)
 Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
-plot(Logistic_Regression_Performance)
+plot(Logistic_Regression_Performance, colorize = TRUE, text.adj = c(-0.2,1.7))
 ```
 
 ```{r}
@@ -515,9 +548,9 @@ TDM_test_data_New  = apply(TDM_test_data_New, MARGIN=2, Convert_Numerics_To_Fact
 ```{r}
 #Train a Naive Bayes Model.
 
-library(e1071)
+#library(e1071)
 # store our model in sms_classifier
-SMS_NB = naiveBayes(MessageLabel ~., data = train_data, laplace = 1)
+SMS_NB = naiveBayes(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, laplace = 1)
 SMS_NBTest = predict(SMS_NB, TDM_test_data_New)
 
 
@@ -525,5 +558,5 @@ library(gmodels)
 CT <- CrossTable(SMS_NBTest, test_data$MessageLabel, 
            prop.chisq = FALSE, 
            prop.t = FALSE, 
-           dnn = c("predicted", "actual")) #Name of column
+           dnn = c("Predicted", "Actual")) #Name of column
 ```
