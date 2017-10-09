@@ -17,11 +17,11 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 #Import all the libraries
 ```{r}
-libraries <- c("ggplot2", "stringr", "magrittr", "futile.logger", "VennDiagram", "tm", "SnowballC", "wordcloud", "RColorBrewer", "lattice", "caret", "rpart", "rpart.plot", "randomForest", "e1071", "ROCR", "gmodels")
+importlib <- c("ggplot2", "stringr", "magrittr", "futile.logger", "VennDiagram", "tm", "SnowballC", "wordcloud", "RColorBrewer", "lattice", "caret", "rpart", "rpart.plot", "randomForest", "e1071", "ROCR", "gmodels")
 
-require(libraries)
+require(importlib)
 
-lapply(libraries, require, character.only = TRUE)
+lapply(importlib, require, character.only = TRUE)
 ```
 #Download the dataset.
 ```{r}
@@ -329,7 +329,20 @@ Clean_BagOfWords <- BagOfWords %>%
                     tm_map(stripWhitespace)                  #Clean by tokenising by striping white space
 
 #Transform corpus into matrix.
-TDM = TermDocumentMatrix(Clean_BagOfWords) 
+TDM = DocumentTermMatrix(Clean_BagOfWords)
+
+SparseWords <- removeSparseTerms(TDM, 0.995)
+
+# convert the matrix of sparse words to data frame
+SparseWords <- as.data.frame(as.matrix(SparseWords))
+
+# rename column names to proper format in order to be used by R
+colnames(SparseWords) <- make.names(colnames(SparseWords))
+
+str(SparseWords)
+
+SparseWords$MessageLabel <- Spam_SMS$MessageLabel
+
 ```
 Preparing prediction models to classify SMS messages as Spam or Legitimate.
 
@@ -347,6 +360,10 @@ Split_Formula <- createDataPartition(Spam_SMS$MessageLabel, p=0.7, list=FALSE)
 train_data <- Spam_SMS[Split_Formula,]
 test_data <- Spam_SMS[-Split_Formula,]
 
+#To split SparseWords into training and test sets.
+Sparse_train_data <- SparseWords[Split_Formula,]
+Sparse_test_data <- SparseWords[-Split_Formula,]
+
 #To split corpus into training and test data.
 Corpus_train_data <- Clean_BagOfWords[Split_Formula]
 Corpus_test_data <- Clean_BagOfWords[-Split_Formula]
@@ -354,6 +371,8 @@ Corpus_test_data <- Clean_BagOfWords[-Split_Formula]
 #To split Term Document Matrix into training and test data.
 TDM_train_data <- TDM[Split_Formula,]
 TDM_test_data <- TDM[-Split_Formula,]
+
+
 ```
 
 ##Producing Wordclouds
@@ -435,7 +454,8 @@ print(TestPredictionTable)
 
 Confusion Matrix
 ```{r}
-confusionMatrix(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel)
+Measure <- confusionMatrix(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel)
+Measure$byClass[5:7]
 ```
 ##Prediction percentage for test data.
 ```{r}
@@ -473,7 +493,8 @@ Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_
 SMS_SVM <- svm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
 SVMTest <- predict(SMS_SVM, test_data)
 
-confusionMatrix(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)
+SVM_Measure <- confusionMatrix(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)
+SVM_Measure$byClass[5:7]
 ```
 
 ##Producing heatmaps for the above confusion matrix.
@@ -532,7 +553,7 @@ TDM_test_data_New =  DocumentTermMatrix(Corpus_test_data, list(dictionary=Freque
 ```
 
 ```{r}
-#To write a fucntion to convert numerics in TDms to factors of yes/no.
+#To write a function to convert numerics in TDms to factors of yes/no.
 Convert_Numerics_To_Factors = function(num) 
   {
   num = ifelse(num > 0, 1, 0)
@@ -560,3 +581,22 @@ CT <- CrossTable(SMS_NBTest, test_data$MessageLabel,
            prop.t = FALSE, 
            dnn = c("Predicted", "Actual")) #Name of column
 ```
+Logistic Regression
+```{r}
+SMS_GLM_Blah <- glm(MessageLabel ~., data = Sparse_train_data, family = "binomial")
+GLMTest_Blah <- predict(SMS_GLM_Blah, Sparse_test_data, type = 'response')
+
+#Confusion Matrix
+table(Sparse_test_data$MessageLabel, GLMTest_Blah > 0.5)
+```
+
+```{r}
+library(ROCR)
+Logistic_Regression_Prediction_Blah <- prediction(abs(GLMTest_Blah), Sparse_test_data$MessageLabel)
+Logistic_Regression_Performance_Blah <- performance(Logistic_Regression_Prediction_Blah,"tpr","fpr")
+
+probab.cuts <- data.frame(cut=Logistic_Regression_Performance_Blah@alpha.values[[1]], prec=Logistic_Regression_Performance_Blah@y.values[[1]], rec=Logistic_Regression_Performance_Blah@x.values[[1]])
+tail(probab.cuts[probab.cuts$cut > 0.5,], 1)
+plot(Logistic_Regression_Performance_Blah, colorize = TRUE, text.adj = c(-0.2,1.7))
+```
+
