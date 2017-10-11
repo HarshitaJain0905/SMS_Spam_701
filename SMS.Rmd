@@ -32,7 +32,7 @@ str(Spam_SMS)
 ## Clean the data. 
 
 ```{r}
-#Remove Null Columns.
+## Remove Null Columns.
 Spam_SMS$X <- NULL
 Spam_SMS$X.1 <- NULL
 Spam_SMS$X.2 <- NULL
