@@ -23,6 +23,7 @@ require(importlib)
 
 lapply(importlib, require, character.only = TRUE)
 ```
+
 ## Download the dataset.
 ```{r}
 Spam_SMS <- read.csv("./SMS_Spam_Dataset.csv", stringsAsFactors = F)
@@ -32,7 +33,7 @@ str(Spam_SMS)
 ## Clean the data. 
 
 ```{r}
-## Remove Null Columns.
+# Remove Null Columns.
 Spam_SMS$X <- NULL
 Spam_SMS$X.1 <- NULL
 Spam_SMS$X.2 <- NULL
@@ -53,57 +54,81 @@ Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "spam"] <- "Spam"
 #Convert class into factor.
 Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ```
-#Explore the data
 
+## Explore the data
+
+Explore the distribution of Spam and Legitimate Messages.
 ```{r}
-#library(ggplot2)
-#Explore the distribution of Legitimate and Spam messages.
+# Produce a data frame displaying the total number of legitmate messages and spam messages.
 Distribution <- as.data.frame(table(Spam_SMS$MessageLabel))
 
+# Calculate percentage for each type of Message Label. 
 Distribution$Percentage <- (Distribution$Freq/nrow(Spam_SMS))*100
 Distribution$Percentage <- round(Distribution$Percentage, digits = 2)
 names(Distribution) <- c("Label", "Total", "Percentage")
 
-#Plot the Distribution.
+# Plot the Distribution.
 ggplot(Distribution, aes(x = Label, y = Percentage)) + geom_bar(stat= "identity", width = 0.5, fill = "dark green") + ylim(0,100) + labs(colour = "Percentage", title = "Distribution of Legitimate and Spam Messages") + geom_text(aes(label = Percentage), color = "red", vjust = 0) + xlab("Label")+ ylab("Percentage Value")
 ```
+This plot reveals that 86% of all the SMS messages in the dataset are Legitimate messages, while 13% of them are Spam messages. 
 
+To know the length of each text so as to be able to explore the data more.
 ```{r}
-
-#To know the length of each text so as to be able to explore the data more.
+# Count the number of characters in each Message.
 Spam_SMS$MessageLength <- nchar(Spam_SMS$Message)
-summary(Spam_SMS$MessageLength)
+
+# Find the maximum length of Legitimate Message.
+max(Spam_SMS$MessageLength[Spam_SMS$MessageLabel == "Legitimate"])
+
+# Find the maximum length of Spam Message.
+max(Spam_SMS$MessageLength[Spam_SMS$MessageLabel == "Spam"])
+
+# Find the minimum length of Legitimate Message.
+min(Spam_SMS$MessageLength[Spam_SMS$MessageLabel == "Legitimate"])
+
+# Find the minimum length of Spam Message.
+min(Spam_SMS$MessageLength[Spam_SMS$MessageLabel == "Spam"])
 ```
 
+Plot the distribution of Legitimate and Spam messages v/s the Message Length.
 ```{r}
-#Plot the distribution of Legitimate and Spammessages v/s the Message Length.
 ggplot(Spam_SMS, aes(x = MessageLength, fill = MessageLabel)) +
   theme_bw() +
   geom_histogram(binwidth = 5) +
   labs(y = "Number of Messages", x = "Length of Message",
        title = "Distribution of Message Lengths with Class Labels")
 ```
-Split Raw SMS Data on Labels (Spam and Legitmate) and produce wordclouds for each.
+This plot helps us understand the following:
+1. The length of legitimate messages ranges from 2 characters to 910 characters.
+2. The length of spam messages ranges from 13 charcters to 224 characters.
+3. The most common length of legitimate messages is 22 characters.
+4. The most common length of spam messages is 158 characters.
+
+Split Raw SMS Data on Labels (Spam and Legitmate) and produce wordclouds for each. Using Wordcloud would help understand frequent words. More frequent the word, larger the font will be for it. Producing wordclouds would give a better understanding of all the features that differentiate Spam SMSs from Legitimate SMSs.
 
 ```{r}
+# Splitting Raw SMS Data on Labels (Spam and Legitmate). 
 Spam_Raw <- subset(Spam_SMS, MessageLabel == "Spam")
 Legitimate_Raw <- subset(Spam_SMS, MessageLabel == "Legitimate")
 
-#Wordcloud for Spam_Raw
+# Produce wordcloud for Spam_Raw
 pal = brewer.pal(6,"Dark2")
 wordcloud(Spam_Raw$Message, max.words = 30, scale=c(8, .3), colors = pal)
 ```
+The wordcloud reveals that the most frequent words in Spam messages are: Call, Free, Now, Mobile, Text, Prize.
 
 ```{r}
-wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(1, .3), colors = pal)
+# Produce wordcloud for Legitimate_Raw
+wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(5, .3), colors = pal)
 ```
-## To convert all the tokens to lower case. Post that, I will run for loops for few words to see if these words are correctly assigned 'y' or 'n' for each message in the dataset. ('y' and 'n' correspond to availability of that word in a particular SMS.) 
-```{r}
-#library(stringr)
-#library(magrittr)
+The wordcloud reveals that the most frequent words in legitimate messages are: Can, Will, Now, Just, etc.
 
-#Transformation of all tokens to lower case.
+To convert all the tokens to lower case. Post that, run for loops for words manually selected as differentiating features for Spam SMSs and for words revealed frequent by the above wordcloud produced for spam messages to correctly assigned 'y' or 'n' for each message in the dataset. ('y' corresponds to availability of that word in a particular SMS while 'n' corresponds to non-availability of that word in the SMS) 
+```{r}
+# Transformation of all tokens to lower case.
 Spam_SMS$Message %<>% str_to_lower()
+
+# For loop for token 'free'
 Spam_SMS$free <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "free")  == TRUE){
@@ -111,6 +136,7 @@ for(i in 1:nrow(Spam_SMS)){
   }
 }
 
+# For loop for token 'winner, win, won, award, selected'
 Spam_SMS$winner <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "winner")  == TRUE){
@@ -127,9 +153,16 @@ for(i in 1:nrow(Spam_SMS)){
     }
     if(str_detect(Spam_SMS$Message[i], "selected")  == TRUE){
    Spam_SMS$winner[i] <- "y"
+    }
+  if(str_detect(Spam_SMS$Message[i], "prize")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "claim")  == TRUE){
+   Spam_SMS$winner[i] <- "y"
   }
 }
 
+# For loop for token 'congratulations, congrats'
 Spam_SMS$congratulation <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "congrats")  == TRUE){
@@ -140,6 +173,7 @@ for(i in 1:nrow(Spam_SMS)){
   }
 }
 
+# For loop for token 'xxx, babe, naked, dirty, flirty'
 Spam_SMS$adult <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "xxx")  == TRUE){
@@ -159,6 +193,7 @@ for(i in 1:nrow(Spam_SMS)){
     }
 }
 
+# For loop for token 'urgent, attention, bonus, immediately'
 Spam_SMS$attention <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "urgent")  == TRUE){
@@ -172,37 +207,60 @@ for(i in 1:nrow(Spam_SMS)){
       }
     if(str_detect(Spam_SMS$Message[i], "immediately")  == TRUE){
     Spam_SMS$attention[i] <- "y"
+    }
+  if(str_detect(Spam_SMS$Message[i], "now")  == TRUE){
+   Spam_SMS$attention[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "stop")  == TRUE){
+   Spam_SMS$attention[i] <- "y"
   }
 }
 
+# For loop for token 'ringtone'
 Spam_SMS$ringtone  <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "ringtone")  == TRUE){
     Spam_SMS$ringtone[i] <- "y"
   }
+  if(str_detect(Spam_SMS$Message[i], "call")  == TRUE){
+   Spam_SMS$ringtone[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "mobile")  == TRUE){
+   Spam_SMS$ringtone[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "text")  == TRUE){
+   Spam_SMS$ringtone[i] <- "y"
+  }
+  if(str_detect(Spam_SMS$Message[i], "txt")  == TRUE){
+   Spam_SMS$ringtone[i] <- "y"
+  }
 }
 
 ```
+After having this chunk run, there are 6 more columns appended to the dataset (Spam_SMS) with values = y or n, depending on the availability of the keywords in messages. 
 
-##Plot bar graph depicting total number of messages with the value of these features being equal to "y".
+Plot bar graph depicting total number of messages with the value of these features being equal to "y".
 ```{r}
 #For Unigrams
 
+# Produce a data frame 'Spam_Features' containing Features and the total number of messages containing that feature.
 Spam_Features <- data.frame(Features = c("Free", "Adult", "Ringtone", "Congratulation", "Winner", "Attention"), Total = c(sum(Spam_SMS$free == "y"), sum(Spam_SMS$adult == "y"), sum(Spam_SMS$ringtone == "y"), sum(Spam_SMS$congratulation == "y"), sum(Spam_SMS$winner == "y"), sum(Spam_SMS$attention == "y")))
 
-ggplot(Spam_Features, aes(x = reorder(Features, -Total), y = Total)) + geom_bar(stat = "identity", fill = "steelblue") + geom_text(aes(label = Total), color = "red", vjust = 0) + xlab("Features")+ ylab("Total")
+# Plot the data frame.
+ggplot(Spam_Features, aes(x = reorder(Features, -Total), y = Total)) + geom_bar(stat = "identity", fill = "steelblue") + geom_text(aes(label = Total), color = "red", vjust = 0) + xlab("Features")+ ylab("Total Number of Messages")
 ```
-##Produce Venn Diagram to see how many SMS messages have combination of these features (bigrams and trigrams feature combinations).
+The plot reveals that the most important features for Spam SMS in this dataset are : Ringtone, Attention and Winner, while the least important are: Congratulations, Adult and Free. 
+
+Produce Venn Diagram to analyse how many SMS messages have bigrams' feature combination and trigrams' feature combinations.
 ```{r}
-#library(futile.logger)
-#library(VennDiagram)
-#I will start by computing the number of SMS messages having combination of two and/or three features. After having obtained these values, I will produce Venn Diagrams for these combinations.
+# Compute the number of SMS messages having combination of two and/or three features. After having obtained these values, Venn Diagrams would be produced for these combinations.
 
 #For bigrams
 
 #For Free and Adult
 Free_Adult <- sum(Spam_SMS$free == "y" & Spam_SMS$adult == "y")
 Free_Adult
+# Venn Diagram for the bigram
 grid.newpage()
 draw.pairwise.venn(area1 = 265, area2 = 150, cross.area = 9, category = c("Free", 
     "Adult"), lty = rep("blank", 
@@ -212,8 +270,9 @@ draw.pairwise.venn(area1 = 265, area2 = 150, cross.area = 9, category = c("Free"
 #For Free and Ringtone
 Free_Ringtone <- sum(Spam_SMS$free == "y" & Spam_SMS$ringtone == "y")
 Free_Ringtone
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 265, area2 = 40, cross.area = 14, category = c("Free", 
+draw.pairwise.venn(area1 = 265, area2 = 994, cross.area = 193, category = c("Free", 
     "Ringtone"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -221,6 +280,7 @@ draw.pairwise.venn(area1 = 265, area2 = 40, cross.area = 14, category = c("Free"
 #For Free and Congratulation
 Free_Congratulation <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y")
 Free_Congratulation
+# Venn Diagram for the bigram
 grid.newpage()
 draw.pairwise.venn(area1 = 265, area2 = 34, cross.area = 9, category = c("Free", 
     "Congratulation"), lty = rep("blank", 
@@ -230,8 +290,9 @@ draw.pairwise.venn(area1 = 265, area2 = 34, cross.area = 9, category = c("Free",
 #For Free and Winner
 Free_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$winner == "y")
 Free_Winner
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 265, area2 = 368, cross.area = 39, category = c("Free", 
+draw.pairwise.venn(area1 = 265, area2 = 419, cross.area = 52, category = c("Free", 
     "Winner"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -239,8 +300,9 @@ draw.pairwise.venn(area1 = 265, area2 = 368, cross.area = 39, category = c("Free
 #For Free and Attention
 Free_Attention <- sum(Spam_SMS$free == "y" & Spam_SMS$attention == "y")
 Free_Attention
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 265, area2 = 85, cross.area = 3, category = c("Free", 
+draw.pairwise.venn(area1 = 265, area2 = 928, cross.area = 104, category = c("Free", 
     "Attention"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -248,8 +310,9 @@ draw.pairwise.venn(area1 = 265, area2 = 85, cross.area = 3, category = c("Free",
 #For Adult and Winner
 Adult_Winner <- sum(Spam_SMS$adult == "y" & Spam_SMS$winner == "y")
 Adult_Winner
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 150, area2 = 368, cross.area = 8, category = c("Adult", 
+draw.pairwise.venn(area1 = 150, area2 = 419, cross.area = 9, category = c("Adult", 
     "Winner"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -257,8 +320,9 @@ draw.pairwise.venn(area1 = 150, area2 = 368, cross.area = 8, category = c("Adult
 #For Adult and Attention
 Adult_Attention <- sum(Spam_SMS$adult == "y" & Spam_SMS$attention == "y")
 Adult_Attention
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 150, area2 = 85, cross.area = 3, category = c("Adult", 
+draw.pairwise.venn(area1 = 150, area2 = 928, cross.area = 29, category = c("Adult", 
     "Attention"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -266,8 +330,9 @@ draw.pairwise.venn(area1 = 150, area2 = 85, cross.area = 3, category = c("Adult"
 #For Congratulation and Winner
 congratulation_Winner <- sum(Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
 congratulation_Winner
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 34, area2 = 368, cross.area = 13, category = c("Congratulation", 
+draw.pairwise.venn(area1 = 34, area2 = 419, cross.area = 14, category = c("Congratulation", 
     "Winner"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
@@ -275,9 +340,60 @@ draw.pairwise.venn(area1 = 34, area2 = 368, cross.area = 13, category = c("Congr
 #For Attention and Winner
 Attention_Winner <- sum(Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
 Attention_Winner
+# Venn Diagram for the bigram
 grid.newpage()
-draw.pairwise.venn(area1 = 85, area2 = 368, cross.area = 47, category = c("Attention", 
+draw.pairwise.venn(area1 = 928, area2 = 419, cross.area = 161, category = c("Attention", 
     "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Ringtone and Winner
+Ringtone_Winner <- sum(Spam_SMS$ringtone == "y" & Spam_SMS$winner == "y")
+Ringtone_Winner
+# Venn Diagram for the bigram
+grid.newpage()
+draw.pairwise.venn(area1 = 994, area2 = 419, cross.area = 235, category = c("Ringtone", 
+    "Winner"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Ringtone and Congratulation
+Ringtone_Congratulation <- sum(Spam_SMS$ringtone == "y" & Spam_SMS$congratulation == "y")
+Ringtone_Congratulation
+# Venn Diagram for the bigram
+grid.newpage()
+draw.pairwise.venn(area1 = 994, area2 = 34, cross.area = 23, category = c("Ringtone", 
+    "Congratulation"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Attention and Congratulation
+Attention_Congratulation <- sum(Spam_SMS$attention == "y" & Spam_SMS$congratulation == "y")
+Attention_Congratulation
+# Venn Diagram for the bigram
+grid.newpage()
+draw.pairwise.venn(area1 = 928, area2 = 34, cross.area = 15, category = c("Attention", 
+    "Congratulation"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Attention and Ringtone
+Attention_Ringtone <- sum(Spam_SMS$attention == "y" & Spam_SMS$ringtone == "y")
+Attention_Ringtone
+# Venn Diagram for the bigram
+grid.newpage()
+draw.pairwise.venn(area1 = 928, area2 = 994, cross.area = 368, category = c("Attention", 
+    "Ringtone"), lty = rep("blank", 
+    2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
+    0), cat.dist = rep(0.025, 2))
+
+#For Adult and Ringtone
+Adult_Ringtone <- sum(Spam_SMS$adult == "y" & Spam_SMS$ringtone == "y")
+Adult_Ringtone
+# Venn Diagram for the bigram
+grid.newpage()
+draw.pairwise.venn(area1 = 150, area2 = 994, cross.area = 39, category = c("Adult", 
+    "Ringtone"), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
 ```
@@ -288,39 +404,37 @@ draw.pairwise.venn(area1 = 85, area2 = 368, cross.area = 47, category = c("Atten
 #For free, congratulation and winner 
 Free_Congratulation_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
 Free_Congratulation_Winner
+# Venn Diagram for the trigram
 grid.newpage()
-draw.triple.venn(area1 = 265, area2 = 34, area3 = 368, n12 = 9, n23 = 13, n13 = 39, 
+draw.triple.venn(area1 = 265, area2 = 34, area3 = 419, n12 = 9, n23 = 14, n13 = 52, 
     n123 = 6, category = c("Free", "Congratulation", "Winner"), lty = "blank", 
     fill = c("skyblue", "pink1", "mediumorchid"))
 
 #For free, attention and winner 
 Free_Attention_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
 Free_Attention_Winner
+# Venn Diagram for the trigram
 grid.newpage()
-draw.triple.venn(area1 = 265, area2 = 85, area3 = 368, n12 = 3, n23 = 47, n13 = 39, 
+draw.triple.venn(area1 = 265, area2 = 928, area3 = 419, n12 = 104, n23 = 161, n13 = 52, 
     n123 = 2, category = c("Free", "Attention", "Winner"), lty = "blank", 
     fill = c("skyblue", "pink1", "mediumorchid"))
 
 #For adult, attention and winner 
 Adult_Attention_Winner <- sum(Spam_SMS$adult == "y" & Spam_SMS$attention == "y" & Spam_SMS$winner == "y")
 Adult_Attention_Winner
+# Venn Diagram for the trigram
 grid.newpage()
-draw.triple.venn(area1 = 150, area2 = 85, area3 = 368, n12 = 3, n23 = 47, n13 = 8, 
+draw.triple.venn(area1 = 150, area2 = 928, area3 = 419, n12 = 29, n23 = 161, n13 = 9, 
     n123 = 3, category = c("Adult", "Attention", "Winner"), lty = "blank", 
     fill = c("skyblue", "pink1", "mediumorchid"))
 ```
-
-##To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
+## Text Analysis
+To make the data ready for text analysis. In this, we use text-mining package (package tm) to manage the documents.
 ```{r}
-#library(tm)
-#library(SnowballC)
-#library(wordcloud)
-#library(RColorBrewer)
-#library(magrittr)
-
+# create a Corpus of Messages in Spam_SMS. 
 BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
 
-#To clean corpus.
+# Clean corpus.
 Clean_BagOfWords <- BagOfWords %>%
                     tm_map(content_transformer(tolower)) %>% #Transofrm to lower case
                     tm_map(removeNumbers) %>%                #Clean by removing numbers
@@ -328,15 +442,15 @@ Clean_BagOfWords <- BagOfWords %>%
                     tm_map(removePunctuation) %>%            #Clean by removing punctuation
                     tm_map(stripWhitespace)                  #Clean by tokenising by striping white space
 
-#Transform corpus into matrix.
+# Transform corpus into matrix.
 TDM = DocumentTermMatrix(Clean_BagOfWords)
 
 SparseWords <- removeSparseTerms(TDM, 0.995)
 
-# convert the matrix of sparse words to data frame
+# Transform the matrix of Sparsewords into data frame.
 SparseWords <- as.data.frame(as.matrix(SparseWords))
 
-# rename column names to proper format in order to be used by R
+# Rename column names.
 colnames(SparseWords) <- make.names(colnames(SparseWords))
 
 str(SparseWords)
@@ -344,73 +458,77 @@ str(SparseWords)
 SparseWords$MessageLabel <- Spam_SMS$MessageLabel
 
 ```
-Preparing prediction models to classify SMS messages as Spam or Legitimate.
+## Classification Process to accurately classify SMS messages into Spam messages or Legitimate messages.
 
-## Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
+Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Sparsewords, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
 ```{r}
-#library(lattice)
-#library(caret)
-#Random number generation using set.seed of 1234.
+# Random number generation using set.seed of 1234.
 set.seed(1234)
 
-#To create a split formula using which I would split the data into train and test sets.
+# Create a split formula using which I would split the data into train and test sets.
 Split_Formula <- createDataPartition(Spam_SMS$MessageLabel, p=0.7, list=FALSE)
 
-#To split Spam_SMS into training and test sets.
+# Split Spam_SMS into training and test sets.
 train_data <- Spam_SMS[Split_Formula,]
 test_data <- Spam_SMS[-Split_Formula,]
 
-#To split SparseWords into training and test sets.
+# Split SparseWords into training and test sets.
 Sparse_train_data <- SparseWords[Split_Formula,]
 Sparse_test_data <- SparseWords[-Split_Formula,]
 
-#To split corpus into training and test data.
+# Split corpus into training and test data.
 Corpus_train_data <- Clean_BagOfWords[Split_Formula]
 Corpus_test_data <- Clean_BagOfWords[-Split_Formula]
 
-#To split Term Document Matrix into training and test data.
+# Split Term Document Matrix into training and test data.
 TDM_train_data <- TDM[Split_Formula,]
 TDM_test_data <- TDM[-Split_Formula,]
 
 
 ```
 
-##Producing Wordclouds
+Producing Wordcloud of the cleaned Corpus for analysis.
 ```{r}
-#Using Wordcloud to see frequent words. More the word is frequent, larger the font will be for it. 
 wordcloud(Clean_BagOfWords, max.words = 75, random.order = FALSE, scale=c(5, .3), colors = pal)
 ```
+The wordcloud reveals that the most frequent words in Clean Corpus(mix of Legitimate and Spam messages) are: Call, Can, Now, Get, Just, Will, Free, etc. Therefore, it is evident that this wordcloud substantiates the two wordclouds produced above (each for spam an legitimate messages) as this wordcloud has a mix of the frequent words shown in those wordclouds (like: Free, Call, Can, Just)
 
+Split train_data on Labels (Spam and Legitmate) and produce wordclouds for each. Using Wordcloud would help understand frequent words. More frequent the word, larger the font will be for it.
 ```{r}
-#Producing separate wordclouds for Legitimate and Spam messages of train_data.
+# Splitting train_data on Labels (Spam and Legitmate).
 Spam <- subset(train_data, MessageLabel == "Spam")
 Legitimate <- subset(train_data, MessageLabel == "Legitimate")
 
-#Wordcloud for Spam
+# Produce wordcloud for Spam
 wordcloud(Spam$Message, max.words = 30, scale=c(7, .3), colors = pal)
 ```
+The wordcloud reveals that the most frequent words in Spam messages for train data are: Call, Free, Now, Claim. Text, etc. they are the same as the ones displayed in the wordcloud for Spam messages in Spam_SMS dataset.
+
 
 ```{r}
-#Wordcloud for Legitimate
+# Produce wordcloud for Legitimate.
 wordcloud(Legitimate$Message, max.words = 30, scale=c(5, .3), colors = pal)
 ```
+The wordcloud reveals that the most frequent words in Legitimate messages for train data are: Will, Can, Now, Just, etc. they are the same as the ones displayed in the wordcloud for Legitimate messages in Spam_SMS dataset.
 
+## Building models based on the manually selected 6 features of Spam SMS.
+
+## Decision Tree Model
 ```{r}
 #To build a recursive partitioning decision tree.
-library(rpart)
-library(rpart.plot)
 SMS_Rpart <- rpart(formula = MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, method = "class")
 
 rpart.plot(SMS_Rpart, type = 4, fallen.leaves = FALSE, extra = 4)
 ```
-##This tree reveals that out of all these tokens, the most important token is 'free' and the least important ones being 'adult, ringtone and congratulation'.
+This tree reveals that out of all these tokens, the most important token is 'free' and the least important ones being 'adult, ringtone and congratulation'.
+
 ```{r}
 summary(SMS_Rpart)
 ```
-##Applying Random Forest to plot the importance of each token.
-```{r}
-#library(randomForest)
+## Randome Forest Classifier
 
+Apply Random Forest to plot the importance of each token.
+```{r}
 train_data$MessageLabel %<>% as.factor()
 train_data$Message  %<>% as.character()
 train_data$free %<>% as.factor()
@@ -420,11 +538,11 @@ train_data$adult  %<>% as.factor()
 train_data$attention   %<>% as.factor()
 train_data$ringtone %<>% as.factor()
 
-#Applying the formula for Random Forest Algorithm
+# Apply the formula for Random Forest Algorithm
 SMS_RF <- MessageLabel ~ free + winner + congratulation + adult + attention + ringtone
 RFSpam_Tree <- randomForest(SMS_RF, data = train_data, ntree=25, proximity = T)
 
-#To plot the Variable Importance Plot.
+# Plot the Variable Importance Plot.
 ImportancePlot <- varImpPlot(RFSpam_Tree, main = "Importance of each Token") 
 
 ```
@@ -488,8 +606,6 @@ Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_
 
 ##Train Support Vector Machine
 ```{r}
-#library(e1071)
-
 SMS_SVM <- svm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
 SVMTest <- predict(SMS_SVM, test_data)
 
