@@ -588,8 +588,8 @@ CrossTable(RFTest, test_data$MessageLabel, prop.chisq = FALSE)
 ```
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.94, while for predicting spam messages is 0.83.
-2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.63.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.06) as compared to the probability of a spam message being predicted as a legitimate message (0.17).
+2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.61.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is moderately high (0.17) as compared to the probability of a spam message being predicted as a legitimate message (0.06).
 
 Accuracy for test data.
 ```{r}
@@ -632,7 +632,7 @@ CrossTable(SVMTest, test_data$MessageLabel, prop.chisq = FALSE)
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.95, while for predicting spam messages is 0.8.
 2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.65.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.05) as compared to the probability of a spam message being predicted as a legitimate message (0.19).
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is moderately high (0.19) as compared to the probability of a spam message being predicted as a legitimate message (0.05).
 
 Accuracy for test data.
 ```{r}
@@ -691,7 +691,7 @@ Logistic_Regression_Prediction <- prediction(abs(GLMTest), test_data$MessageLabe
 Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
 plot(Logistic_Regression_Performance, colorize = TRUE, text.adj = c(-0.2,1.7))
 ```
-The ROCR curve substantiates the high accuracy of the model as the closer the ROC curve is to the upper left corner, the higher the overall accuracy of the test.
+The ROCR curve substantiates the high accuracy of the model as the closer the curve follows the left-hand border and then the top border of the ROC space, the more accurate the test.
 
 ##Naive Bayes Classifier
 ```{r}
@@ -723,13 +723,12 @@ SMS_NBTest = predict(SMS_NB, TDM_test_data_New)
 library(gmodels)
 CT <- CrossTable(SMS_NBTest, test_data$MessageLabel, 
            prop.chisq = FALSE, 
-           prop.t = FALSE, 
            dnn = c("Predicted", "Actual")) #Name of column
 ```
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.87, while for predicting spam messages is 1.00.
 2. Recall for predicting Legitimate messages is 1.00, while for predicting spam messages is 0.013.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is high (0.13) as compared to the probability of a spam message being predicted as a legitimate message (0.00).
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is perfect (0.00) as compared to the probability of a spam message being predicted as a legitimate message (0.13).
 
 ## Building models for all the features of Spam SMS.
 
@@ -781,7 +780,7 @@ CrossTable(RFTest_All, test_data$MessageLabel, prop.chisq = FALSE)
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.97, while for predicting spam messages is 0.94.
 2. Recall for predicting Legitimate messages is 0.99, while for predicting spam messages is 0.78.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.03) as compared to the probability of a spam message being predicted as a legitimate message (0.64).
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.06) as compared to the probability of a spam message being predicted as a legitimate message (0.03).
 
 
 Accuracy for test Data.
@@ -824,7 +823,7 @@ CrossTable(SVMTest_All, Sparse_test_data$MessageLabel, prop.chisq = FALSE)
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.85.
 2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.88.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.02) as compared to the probability of a spam message being predicted as a legitimate message (0.15).
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite high (0.15) as compared to the probability of a spam message being predicted as a legitimate message (0.02).
 
 Accuracy for test data.
 ```{r}
@@ -882,7 +881,7 @@ Logistic_Regression_Prediction_All <- prediction(abs(GLMTest_All), Sparse_test_d
 Logistic_Regression_Performance_All <- performance(Logistic_Regression_Prediction_All,"tpr","fpr")
 plot(Logistic_Regression_Performance_All, colorize = TRUE, text.adj = c(-0.2,1.7))
 ```
-The ROCR curve substantiates the high accuracy of the model as the closer the ROC curve is to the upper left corner, the higher the overall accuracy of the test.
+The ROCR curve substantiates the high accuracy of the model as the closer the curve follows the left-hand border and then the top border of the ROC space, the more accurate the test.
 
 ## Naive Bayes Model
 
