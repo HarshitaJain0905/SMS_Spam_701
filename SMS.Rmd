@@ -17,7 +17,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 ## Import all the libraries
 ```{r}
-importlib <- c("ggplot2", "stringr", "magrittr", "futile.logger", "VennDiagram", "tm", "SnowballC", "wordcloud", "RColorBrewer", "lattice", "caret", "rpart", "rpart.plot", "randomForest", "e1071", "ROCR", "gmodels")
+importlib <- c("ggplot2", "stringr", "magrittr", "futile.logger", "VennDiagram", "tm", "SnowballC", "wordcloud", "RColorBrewer", "lattice", "caret", "rpart", "rpart.plot", "randomForest", "e1071", "ROCR", "gmodels", "mime", "plotly")
 
 require(importlib)
 
@@ -67,8 +67,18 @@ Distribution$Percentage <- (Distribution$Freq/nrow(Spam_SMS))*100
 Distribution$Percentage <- round(Distribution$Percentage, digits = 2)
 names(Distribution) <- c("Label", "Total", "Percentage")
 
-# Plot the Distribution.
-ggplot(Distribution, aes(x = Label, y = Percentage)) + geom_bar(stat= "identity", width = 0.5, fill = "dark green") + ylim(0,100) + labs(colour = "Percentage", title = "Distribution of Legitimate and Spam Messages") + geom_text(aes(label = Percentage), color = "red", vjust = 0) + xlab("Label")+ ylab("Percentage Value")
+# Plot the Distribution using plotly.
+attach(Distribution)
+
+List <- list(
+     zeroline=FALSE,
+     showline=FALSE,
+     showticklabels=FALSE,
+     showgrid=FALSE
+ )
+
+plot_ly(Distribution, labels=Label, values = Percentage, type="pie", hole=0.2, showlegend = T) %>% layout(title = "Distribution of Spam Messages v/s Legitimate Messages", xaxis=List, yaxis=List, showlegend = TRUE)
+
 ```
 This plot reveals that 86% of all the SMS messages in the dataset are Legitimate messages, while 13% of them are Spam messages. 
 
@@ -113,13 +123,13 @@ Legitimate_Raw <- subset(Spam_SMS, MessageLabel == "Legitimate")
 
 # Produce wordcloud for Spam_Raw
 pal = brewer.pal(6,"Dark2")
-wordcloud(Spam_Raw$Message, max.words = 30, scale=c(8, .3), colors = pal)
+wordcloud(Spam_Raw$Message, max.words = 30, scale=c(6, .3), colors = pal)
 ```
 The wordcloud reveals that the most frequent words in Spam messages are: Call, Free, Now, Mobile, Text, Prize.
 
 ```{r}
 # Produce wordcloud for Legitimate_Raw
-wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(5, .3), colors = pal)
+wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(4, .3), colors = pal)
 ```
 The wordcloud reveals that the most frequent words in legitimate messages are: Can, Will, Now, Just, etc.
 
@@ -237,7 +247,7 @@ for(i in 1:nrow(Spam_SMS)){
 }
 
 ```
-After having this chunk run, there are 6 more columns appended to the dataset (Spam_SMS) with values = y or n, depending on the availability of the keywords in messages. 
+After having this chunk run, there are 6 more columns added to the dataset (Spam_SMS) with values = y or n, depending on the availability of the keywords in messages. 
 
 Plot bar graph depicting total number of messages with the value of these features being equal to "y".
 ```{r}
@@ -249,13 +259,13 @@ Spam_Features <- data.frame(Features = c("Free", "Adult", "Ringtone", "Congratul
 # Plot the data frame.
 ggplot(Spam_Features, aes(x = reorder(Features, -Total), y = Total)) + geom_bar(stat = "identity", fill = "steelblue") + geom_text(aes(label = Total), color = "red", vjust = 0) + xlab("Features")+ ylab("Total Number of Messages")
 ```
-The plot reveals that the most important features for Spam SMS in this dataset are : Ringtone, Attention and Winner, while the least important are: Congratulations, Adult and Free. 
+The plot reveals that the most frequently used keywords fall under the categories: Ringtone, Attention and Winner, while the least frequently used keywords fall under the categories: Congratulations, Adult and Free. 
 
 Produce Venn Diagram to analyse how many SMS messages have bigrams' feature combination and trigrams' feature combinations.
+
+For bigrams
 ```{r}
 # Compute the number of SMS messages having combination of two and/or three features. After having obtained these values, Venn Diagrams would be produced for these combinations.
-
-#For bigrams
 
 #For Free and Adult
 Free_Adult <- sum(Spam_SMS$free == "y" & Spam_SMS$adult == "y")
@@ -398,8 +408,9 @@ draw.pairwise.venn(area1 = 150, area2 = 994, cross.area = 39, category = c("Adul
     0), cat.dist = rep(0.025, 2))
 ```
 
+For trigrams
 ```{r}
-#For trigrams
+
 
 #For free, congratulation and winner 
 Free_Congratulation_Winner <- sum(Spam_SMS$free == "y" & Spam_SMS$congratulation == "y" & Spam_SMS$winner == "y")
@@ -458,6 +469,7 @@ str(SparseWords)
 SparseWords$MessageLabel <- Spam_SMS$MessageLabel
 
 ```
+
 ## Classification Process to accurately classify SMS messages into Spam messages or Legitimate messages.
 
 Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Sparsewords, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
@@ -502,32 +514,33 @@ Legitimate <- subset(train_data, MessageLabel == "Legitimate")
 # Produce wordcloud for Spam
 wordcloud(Spam$Message, max.words = 30, scale=c(7, .3), colors = pal)
 ```
-The wordcloud reveals that the most frequent words in Spam messages for train data are: Call, Free, Now, Claim. Text, etc. they are the same as the ones displayed in the wordcloud for Spam messages in Spam_SMS dataset.
+The wordcloud reveals that the most frequent words in Spam messages for train data are: Call, Free, Now, Claim. Text, etc. They are the same as the ones displayed in the wordcloud for Spam messages in Spam_SMS dataset. Hence, this shows that the data has been correctly splitted into trainng and test sets.
 
 
 ```{r}
 # Produce wordcloud for Legitimate.
 wordcloud(Legitimate$Message, max.words = 30, scale=c(5, .3), colors = pal)
 ```
-The wordcloud reveals that the most frequent words in Legitimate messages for train data are: Will, Can, Now, Just, etc. they are the same as the ones displayed in the wordcloud for Legitimate messages in Spam_SMS dataset.
+The wordcloud reveals that the most frequent words in Legitimate messages for train data are: Will, Can, Now, Just, etc. they are the same as the ones displayed in the wordcloud for Legitimate messages in Spam_SMS dataset. Hence, this shows that the data has been correctly splitted into trainng and test sets.
 
 ## Building models based on the manually selected 6 features of Spam SMS.
 
 ## Decision Tree Model
 ```{r}
-#To build a recursive partitioning decision tree.
+# Build a recursive partitioning decision tree.
+
 SMS_Rpart <- rpart(formula = MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, method = "class")
 
 rpart.plot(SMS_Rpart, type = 4, fallen.leaves = FALSE, extra = 4)
 ```
-This tree reveals that out of all these tokens, the most important token is 'free' and the least important ones being 'adult, ringtone and congratulation'.
+This tree reveals that out of all these tokens, the most important token is 'ringtone' and the least important ones being 'congratulation and adult'.
 
 ```{r}
 summary(SMS_Rpart)
 ```
 ## Randome Forest Classifier
 
-Apply Random Forest to plot the importance of each token.
+Apply Random Forest to substantiate analysis of Decision Tree by plotting the importance of each token.
 ```{r}
 train_data$MessageLabel %<>% as.factor()
 train_data$Message  %<>% as.character()
@@ -546,14 +559,14 @@ RFSpam_Tree <- randomForest(SMS_RF, data = train_data, ntree=25, proximity = T)
 ImportancePlot <- varImpPlot(RFSpam_Tree, main = "Importance of each Token") 
 
 ```
-This plot also expresses that the most important token aongst all is 'free', and the least important are 'adult, congratulation and ringtone'.
+This plot salso expresses that the most important token aongst all is 'Ringtone', and the least important are 'adult and congratulation'.
 
 ```{r}
-#Importance of each token in a tabular form.
+# Importance of each token in a tabular form.
 importance(RFSpam_Tree)
 ```
 
-#To test the above Random Forest Model on test data and check the prediction percentage.
+Test the above Random Forest Model on test data and check the accuracy, precision, recall and F1.
 ```{r}
 test_data$MessageLabel %<>% as.factor()
 test_data$Message  %<>% as.character()
@@ -564,75 +577,86 @@ test_data$adult  %<>% as.factor()
 test_data$attention   %<>% as.factor()
 test_data$ringtone %<>% as.factor()
 
-
 RFTest <- predict(RFSpam_Tree, newdata =test_data)
-TestPredictionTable <- table(RFTest, test_data$MessageLabel)
-print(TestPredictionTable)
-```
 
-Confusion Matrix
-```{r}
-Measure <- confusionMatrix(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel)
-Measure$byClass[5:7]
+# Confusion Matrix
+RF_Matrix <- confusionMatrix(predict(RFSpam_Tree, newdata =test_data), test_data$MessageLabel)
+RF_Matrix
+
+# CrossTable
+CrossTable(RFTest, test_data$MessageLabel, prop.chisq = FALSE)
 ```
-##Prediction percentage for test data.
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.94, while for predicting spam messages is 0.83.
+2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.63.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.06) as compared to the probability of a spam message being predicted as a legitimate message (0.17).
+
+Accuracy for test data.
 ```{r}
 TestPredictability <- sum(RFTest == test_data$MessageLabel)/ length(test_data$MessageLabel)*100
-message("Predcitability Percentage for Test Data is:")
+
+message("Accuracy for Test Data is:")
 print(TestPredictability)
 ```
-##Producing Heatmap for the above model.
+Plot COnfusion Matrix
 ```{r}
-library(lattice)
-library(caret)
-#Converting table for 70-30 split regime into a data frame.
-RFSpam_Tree_Table <- as.data.frame(table(predict(RFSpam_Tree, newdata = test_data), test_data$MessageLabel))
 
-#Normalizing data between 0 and 1 using Min-Max Normalization. 
-Normalized = (RFSpam_Tree_Table$Freq-min(RFSpam_Tree_Table$Freq))/(max(RFSpam_Tree_Table$Freq) - min(RFSpam_Tree_Table$Freq))
-#Replacing data of Freq column with Normalized data.
-RFSpam_Tree_Table[,"Freq"] <- Normalized
+Reference_RF <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
+Prediction_RF <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
+Y <- c(1419, 28, 84, 140)
+ConfusionMatrixPlot <- data.frame(Reference_RF, Prediction_RF, Y)
 
-# ggplotting the contents of table of 70-30 split regime into Heatmap.
-Heatmap <- ggplot(RFSpam_Tree_Table)
-
-#Final Plotting step
-Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_discrete(name="Reference Class",  position = "top") + scale_y_discrete(name="Predicted Class", limits = rev(levels(RFSpam_Tree_Table$Var1))) + scale_fill_gradient(breaks=seq(from=-.5, to=4, by=.25), low = "white", high = "steelblue") + labs(fill="Normalized\nFrequency")
-
+# Plot
+ggplot(data =  ConfusionMatrixPlot, mapping = aes(x = Reference_RF, y = Prediction_RF)) +
+     geom_tile(aes(fill = Y), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     scale_fill_gradient(low = "yellow", high = "dark green") +
+     theme_bw() + theme(legend.position = "none")
 
 ```
 
 
 
-##Train Support Vector Machine
+## Support Vector Machine
 ```{r}
 SMS_SVM <- svm(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
 SVMTest <- predict(SMS_SVM, test_data)
 
-SVM_Measure <- confusionMatrix(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)
-SVM_Measure$byClass[5:7]
-```
+# Confusion Matrix
+SVM_Matrix <- confusionMatrix(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)
+SVM_Matrix
 
-##Producing heatmaps for the above confusion matrix.
-```{r}
-SVM_Tree <- as.data.frame(table(predict(SMS_SVM, newdata = test_data), test_data$MessageLabel)) 
-#Normalizing data between 0 and 1 using Min-Max Normalization. 
-Normalized = (SVM_Tree$Freq-min(SVM_Tree$Freq))/(max(SVM_Tree$Freq) - min(SVM_Tree$Freq))
-#Replacing data of Freq column with Normalized data.
-SVM_Tree[,"Freq"] <- Normalized
-#ggplotting the contents of table of 70-30 split regime into Heatmap.
-Heatmap <- ggplot(SVM_Tree)
- 
-#Final Plotting step
-Heatmap + geom_tile(aes(x=Var1, y=Var2, fill=Freq), colour = "white") + scale_x_discrete(name="Reference Class",  position = "top") + scale_y_discrete(name="Predicted Class", limits = rev(levels(SVM_Tree$Var1))) + scale_fill_gradient(breaks=seq(from=-.5, to=4, by=.25), low = "white", high = "steelblue") + labs(fill="Normalized\nFrequency")
+# CrossTable
+CrossTable(SVMTest, test_data$MessageLabel, prop.chisq = FALSE)
 ```
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.95, while for predicting spam messages is 0.8.
+2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.65.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.05) as compared to the probability of a spam message being predicted as a legitimate message (0.19).
 
+Accuracy for test data.
 ```{r}
 svm.accuracy.table <- as.data.frame(table(test_data$MessageLabel, SVMTest))
 print(paste("Accuracy for SVM is:",
             100*round(((svm.accuracy.table$Freq[1]+svm.accuracy.table$Freq[4])/nrow(test_data)), 4),
             "%"))
 
+```
+
+
+Plot confusion matrix.
+```{r}
+Reference_SVM <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
+Prediction_SVM <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
+Y_SVM <- c(1413, 34, 79, 145)
+ConfusionMatrixPlot_SVM <- data.frame(Reference_SVM, Prediction_SVM, Y_SVM)
+
+# Plot
+ggplot(data =  ConfusionMatrixPlot_SVM, mapping = aes(x = Reference_SVM, y = Prediction_SVM)) +
+     geom_tile(aes(fill = Y), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     scale_fill_gradient(low = "yellow", high = "dark green") +
+     theme_bw() + theme(legend.position = "none")
 ```
 
 ## Logistic regression
@@ -642,16 +666,16 @@ SMS_GLM <- glm(MessageLabel ~ free + winner + congratulation + adult + attention
 GLMTest <- predict(SMS_GLM, test_data, type = 'response')
 
 #Confusion Matrix
-table(test_data$MessageLabel, GLMTest > 0.5)
-```
+GLM_Matrix <- table(test_data$MessageLabel, GLMTest > 0.5)
+GLM_Matrix
 
-```{r}
-library(ROCR)
-Logistic_Regression_Prediction <- prediction(abs(GLMTest), test_data$MessageLabel)
-Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
-plot(Logistic_Regression_Performance, colorize = TRUE, text.adj = c(-0.2,1.7))
+summary(SMS_GLM)
 ```
+Analysing the summary for Logistic Regression train model, we can infer that:
+1. Distribution of residuals is symmetrical. That is, that model can accurately predict points that are close to the actual observed points. 
+2. The model reveals that 'congratulation' and 'adult' are the most least important terms as their value of error is far greater than the value of error for Intercept.
 
+Accuracy for test data.
 ```{r}
 #table(test_data$Label, Logistic_Regression_Test > 0.75)
 glm.accuracy.table <- as.data.frame(table(test_data$MessageLabel, GLMTest > 0.75))
@@ -659,6 +683,15 @@ print(paste("Accuracy of Logistic Regression is:",
             100*round(((glm.accuracy.table$Freq[1]+glm.accuracy.table$Freq[4])/nrow(test_data)), 4),
             "%"))
 ```
+
+ROCR Curve
+```{r}
+library(ROCR)
+Logistic_Regression_Prediction <- prediction(abs(GLMTest), test_data$MessageLabel)
+Logistic_Regression_Performance <- performance(Logistic_Regression_Prediction,"tpr","fpr")
+plot(Logistic_Regression_Performance, colorize = TRUE, text.adj = c(-0.2,1.7))
+```
+The ROCR curve substantiates the high accuracy of the model as the closer the ROC curve is to the upper left corner, the higher the overall accuracy of the test.
 
 ##Naive Bayes Classifier
 ```{r}
@@ -683,10 +716,6 @@ TDM_test_data_New  = apply(TDM_test_data_New, MARGIN=2, Convert_Numerics_To_Fact
 ```
 
 ```{r}
-#Train a Naive Bayes Model.
-
-#library(e1071)
-# store our model in sms_classifier
 SMS_NB = naiveBayes(MessageLabel ~ free + winner + congratulation + adult + attention + ringtone, data = train_data, laplace = 1)
 SMS_NBTest = predict(SMS_NB, TDM_test_data_New)
 
@@ -697,22 +726,175 @@ CT <- CrossTable(SMS_NBTest, test_data$MessageLabel,
            prop.t = FALSE, 
            dnn = c("Predicted", "Actual")) #Name of column
 ```
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.87, while for predicting spam messages is 1.00.
+2. Recall for predicting Legitimate messages is 1.00, while for predicting spam messages is 0.013.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is high (0.13) as compared to the probability of a spam message being predicted as a legitimate message (0.00).
+
+## Building models for all the features of Spam SMS.
+
+## Decision Tree Model
+```{r} 
+# Build a recursive partitioning decision tree.
+SMS_Rpart_All <- rpart(formula = MessageLabel ~., data = Sparse_train_data, method = "class")
+
+rpart.plot(SMS_Rpart_All, type = 4, fallen.leaves = FALSE, extra = 4)
+```
+This tree reveals that out of all these tokens, the most important token is 'call' and the least important ones being 'mobile and stop'.
+
+```{r}
+summary(SMS_Rpart_All)
+```
+## Randome Forest Classifier
+
+Apply Random Forest to substantiate analysis of Decision Tree by plotting the importance of each token.
+```{r}
+Sparse_train_data$MessageLabel %<>% as.factor()
+
+#Applying the formula for Random Forest Algorithm
+RFSpam_Tree_All <- randomForest(MessageLabel~., data = Sparse_train_data, ntree=25, proximity = T)
+
+#To plot the Variable Importance Plot.
+ImportancePlot <- varImpPlot(RFSpam_Tree_All, n.var=min(10, nrow(RFSpam_Tree_All$importance), main = "Importance of each Token"))
+
+```
+This plot also expresses that the most important token amongst all is 'Call'.
+
+```{r}
+# Importance of each token in a tabular form.
+importance(RFSpam_Tree_All)
+```
+
+Test the above Random Forest Model on test data and check the accuracy, precision, recall and F1.
+```{r}
+Sparse_test_data$MessageLabel %<>% as.factor()
+
+RFTest_All <- predict(RFSpam_Tree_All, newdata =Sparse_test_data)
+
+# Confusion Matrix
+RFTest_Matrix_All <- confusionMatrix(predict(RFSpam_Tree_All, newdata =Sparse_test_data), Sparse_test_data$MessageLabel)
+RFTest_Matrix_All
+
+# CrossTable
+CrossTable(RFTest_All, test_data$MessageLabel, prop.chisq = FALSE)
+```
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.97, while for predicting spam messages is 0.94.
+2. Recall for predicting Legitimate messages is 0.99, while for predicting spam messages is 0.78.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.03) as compared to the probability of a spam message being predicted as a legitimate message (0.64).
+
+
+Accuracy for test Data.
+```{r}
+TestPredictability_All <- sum(RFTest_All == Sparse_test_data$MessageLabel)/ length(Sparse_test_data$MessageLabel)*100
+
+message("Predcitability Percentage for Test Data is:")
+print(TestPredictability_All)
+```
+
+Plot Confusion Matrix
+```{r}
+
+Reference_RF_All <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
+Prediction_RF_All <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
+Y_All <- c(1435, 49, 12, 175)
+ConfusionMatrixPlot_All <- data.frame(Reference, Prediction, Y)
+
+# Plot
+ggplot(data =  ConfusionMatrixPlot_All, mapping = aes(x = Reference_RF_All, y = Prediction_RF_All)) +
+     geom_tile(aes(fill = Y), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     scale_fill_gradient(low = "yellow", high = "dark green") +
+     theme_bw() + theme(legend.position = "none")
+
+```
+
+## Support Vector Machine
+
+```{r}
+SMS_SVM_All <- svm(MessageLabel ~., data = Sparse_train_data, kernel = "linear", cost = 0.1, gamma = 0.1)
+SVMTest_All <- predict(SMS_SVM_All, Sparse_test_data)
+
+# Confusion Matrix
+SVM_Measure_All <- confusionMatrix(predict(SMS_SVM_All, newdata = Sparse_test_data), Sparse_test_data$MessageLabel)
+
+# CrossTable
+CrossTable(SVMTest_All, Sparse_test_data$MessageLabel, prop.chisq = FALSE)
+```
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.85.
+2. Recall for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.88.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.02) as compared to the probability of a spam message being predicted as a legitimate message (0.15).
+
+Accuracy for test data.
+```{r}
+svm.accuracy.table_All <- as.data.frame(table(Sparse_test_data$MessageLabel, SVMTest_All))
+print(paste("Accuracy for SVM is:",
+            100*round(((svm.accuracy.table_All$Freq[1]+svm.accuracy.table_All$Freq[4])/nrow(Sparse_test_data)), 4),
+            "%"))
+
+```
+
+Plot Confusion Matrix
+```{r}
+
+Reference_SVM_All <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
+Prediction_SVM_All <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
+Y_SVM_All <- c(1412, 35, 28, 196)
+ConfusionMatrixPlot_SVM_All <- data.frame(Reference_SVM_All, Prediction_SVM_All, Y_SVM_All)
+
+# Plot
+ggplot(data =  ConfusionMatrixPlot_SVM_All, mapping = aes(x = Reference_SVM_All, y = Prediction_SVM_All)) +
+     geom_tile(aes(fill = Y), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     scale_fill_gradient(low = "yellow", high = "dark green") +
+     theme_bw() + theme(legend.position = "none")
+
+```
+
 Logistic Regression
 ```{r}
-SMS_GLM_Blah <- glm(MessageLabel ~., data = Sparse_train_data, family = "binomial")
-GLMTest_Blah <- predict(SMS_GLM_Blah, Sparse_test_data, type = 'response')
+SMS_GLM_All <- glm(MessageLabel ~., data = Sparse_train_data, family = "binomial")
+GLMTest_All <- predict(SMS_GLM_All, Sparse_test_data, type = 'response')
 
 #Confusion Matrix
-table(Sparse_test_data$MessageLabel, GLMTest_Blah > 0.5)
+GLM_Matrix_All <- table(Sparse_test_data$MessageLabel, GLMTest_All > 0.5)
+GLM_Matrix_All
+
+summary(SMS_GLM_All)
+```
+Analysing the summary for Logistic Regression train model, we can infer that:
+1. Distribution of residuals is not so symmetrical. That is, that model is also predicting points far away from the actual observed points. 
+2. The model reveals that 'call' is the most important terms as its value of error is same as the value of error for Intercept.
+
+Accuracy for test data.
+```{r}
+glm.accuracy.table.All <- as.data.frame(table(Sparse_test_data$MessageLabel, GLMTest_All > 0.75))
+print(paste("Accuracy of Logistic Regression is:",
+            100*round(((glm.accuracy.table.All$Freq[1]+glm.accuracy.table.All$Freq[4])/nrow(Sparse_test_data)), 4),
+            "%"))
 ```
 
+ROCR Curve
 ```{r}
 library(ROCR)
-Logistic_Regression_Prediction_Blah <- prediction(abs(GLMTest_Blah), Sparse_test_data$MessageLabel)
-Logistic_Regression_Performance_Blah <- performance(Logistic_Regression_Prediction_Blah,"tpr","fpr")
-
-probab.cuts <- data.frame(cut=Logistic_Regression_Performance_Blah@alpha.values[[1]], prec=Logistic_Regression_Performance_Blah@y.values[[1]], rec=Logistic_Regression_Performance_Blah@x.values[[1]])
-tail(probab.cuts[probab.cuts$cut > 0.5,], 1)
-plot(Logistic_Regression_Performance_Blah, colorize = TRUE, text.adj = c(-0.2,1.7))
+Logistic_Regression_Prediction_All <- prediction(abs(GLMTest_All), Sparse_test_data$MessageLabel)
+Logistic_Regression_Performance_All <- performance(Logistic_Regression_Prediction_All,"tpr","fpr")
+plot(Logistic_Regression_Performance_All, colorize = TRUE, text.adj = c(-0.2,1.7))
 ```
+The ROCR curve substantiates the high accuracy of the model as the closer the ROC curve is to the upper left corner, the higher the overall accuracy of the test.
 
+## Naive Bayes Model
+
+```{r}
+SMS_NB_All = naiveBayes(MessageLabel ~. , data = Sparse_train_data, laplace = 1)
+SMS_NBTest_All = predict(SMS_NB_All, TDM_test_data_New)
+
+
+library(gmodels)
+CT <- CrossTable(SMS_NBTest_All, Sparse_test_data$MessageLabel, 
+           prop.chisq = FALSE, 
+           prop.t = FALSE, 
+           dnn = c("Predicted", "Actual")) #Name of column
+```
+Accurately predicted all the legitimate and spam messages.
