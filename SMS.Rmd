@@ -730,6 +730,13 @@ This classifier has produced a model with:
 2. Recall for predicting Legitimate messages is 1.00, while for predicting spam messages is 0.013.
 Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is perfect (0.00) as compared to the probability of a spam message being predicted as a legitimate message (0.13).
 
+```{r}
+nb.accuracy.table <- as.data.frame(table(test_data$MessageLabel, SMS_NBTest))
+print(paste("Accuracy for NB is:",
+             100*round(((nb.accuracy.table$Freq[1]+nb.accuracy.table$Freq[4])/nrow(test_data)), 4),
+             "%"))
+```
+
 ## Building models for all the features of Spam SMS.
 
 ## Decision Tree Model
