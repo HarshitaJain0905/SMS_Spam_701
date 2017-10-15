@@ -782,7 +782,7 @@ RFTest_Matrix_All <- confusionMatrix(predict(RFSpam_Tree_All, newdata =Sparse_te
 RFTest_Matrix_All
 
 # CrossTable
-CrossTable(RFTest_All, test_data$MessageLabel, prop.chisq = FALSE)
+CrossTable(RFTest_All, Sparse_test_data$MessageLabel, prop.chisq = FALSE)
 ```
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.97, while for predicting spam messages is 0.94.
@@ -894,7 +894,7 @@ The ROCR curve substantiates the high accuracy of the model as the closer the cu
 
 ```{r}
 SMS_NB_All = naiveBayes(MessageLabel ~. , data = Sparse_train_data, laplace = 1)
-SMS_NBTest_All = predict(SMS_NB_All, TDM_test_data_New)
+SMS_NBTest_All = predict(SMS_NB_All, Sparse_test_data) 
 
 
 library(gmodels)
@@ -904,3 +904,10 @@ CT <- CrossTable(SMS_NBTest_All, Sparse_test_data$MessageLabel,
            dnn = c("Predicted", "Actual")) #Name of column
 ```
 Accurately predicted all the legitimate and spam messages.
+
+```{r}
+nb.accuracy.table.all <- as.data.frame(table(Sparse_test_data$MessageLabel, SMS_NBTest_All))
+print(paste("Accuracy for NB is:",
+             100*round(((nb.accuracy.table.all$Freq[1]+nb.accuracy.table.all$Freq[4])/nrow(Sparse_test_data)), 4),
+             "%"))
+```
