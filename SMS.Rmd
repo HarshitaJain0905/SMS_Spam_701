@@ -1,9 +1,9 @@
 ---
 title: "SMS"
 output:
-  word_document: default
-  pdf_document: default
   html_document: default
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -38,20 +38,20 @@ Spam_SMS$X <- NULL
 Spam_SMS$X.1 <- NULL
 Spam_SMS$X.2 <- NULL
 
-#Assign appropriate names to the columns.
+# Assign appropriate names to the columns.
 names(Spam_SMS) <- c("MessageLabel","Message")
 
-#Check if any other NULL values exist in the dataset.
+# Check if any other NULL values exist in the dataset.
 colSums(is.na(Spam_SMS))
 
-#Convert class into factor.
+# Convert class into factor.
 levels(as.factor(Spam_SMS$MessageLabel))
 
-#Assign appropriate names to the data entries under Column "Message_Label"
+# Assign appropriate names to the data entries under Column "Message_Label"
 Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "ham"] <- "Legitimate"
 Spam_SMS$MessageLabel[Spam_SMS$MessageLabel == "spam"] <- "Spam"
 
-#Convert class into factor.
+# Convert class into factor.
 Spam_SMS$MessageLabel <- factor(Spam_SMS$MessageLabel)
 ```
 
@@ -125,7 +125,7 @@ Legitimate_Raw <- subset(Spam_SMS, MessageLabel == "Legitimate")
 pal = brewer.pal(6,"Dark2")
 wordcloud(Spam_Raw$Message, max.words = 30, scale=c(6, .3), colors = pal)
 ```
-The wordcloud reveals that the most frequent words in Spam messages are: Call, Free, Now, Mobile, Text, Prize.
+The wordcloud reveals that the most frequent words in Spam messages are: Call, Free, Now, Mobile, Text and Prize.
 
 ```{r}
 # Produce wordcloud for Legitimate_Raw
@@ -133,7 +133,7 @@ wordcloud(Legitimate_Raw$Message, max.words = 30, scale=c(4, .3), colors = pal)
 ```
 The wordcloud reveals that the most frequent words in legitimate messages are: Can, Will, Now, Just, etc.
 
-To convert all the tokens to lower case. Post that, run for loops for words manually selected as differentiating features for Spam SMSs and for words revealed frequent by the above wordcloud produced for spam messages to correctly assigned 'y' or 'n' for each message in the dataset. ('y' corresponds to availability of that word in a particular SMS while 'n' corresponds to non-availability of that word in the SMS) 
+To convert all the tokens to lower case. Post that, run for loops for words manually selected as differentiating features for Spam SMSs, and for words revealed frequent by the above wordcloud produced for spam messages. This would be followed by correct assignment of  'y' or 'n' for each message in the dataset. ('y' corresponds to availability of that word in a particular SMS while 'n' corresponds to non-availability of that word in the SMS) 
 ```{r}
 # Transformation of all tokens to lower case.
 Spam_SMS$Message %<>% str_to_lower()
@@ -146,7 +146,7 @@ for(i in 1:nrow(Spam_SMS)){
   }
 }
 
-# For loop for token 'winner, win, won, award, selected'
+# For loop for token 'winner, win, won, award, selected, prize and claim'
 Spam_SMS$winner <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "winner")  == TRUE){
@@ -203,7 +203,7 @@ for(i in 1:nrow(Spam_SMS)){
     }
 }
 
-# For loop for token 'urgent, attention, bonus, immediately'
+# For loop for token 'urgent, attention, bonus, immediately, now, stop'
 Spam_SMS$attention <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "urgent")  == TRUE){
@@ -226,7 +226,7 @@ for(i in 1:nrow(Spam_SMS)){
   }
 }
 
-# For loop for token 'ringtone'
+# For loop for token 'ringtone, call, mobile, text, txt'
 Spam_SMS$ringtone  <- "n"
 for(i in 1:nrow(Spam_SMS)){
   if(str_detect(Spam_SMS$Message[i], "ringtone")  == TRUE){
@@ -447,11 +447,11 @@ BagOfWords <- Corpus(VectorSource(Spam_SMS$Message))
 
 # Clean corpus.
 Clean_BagOfWords <- BagOfWords %>%
-                    tm_map(content_transformer(tolower)) %>% #Transofrm to lower case
-                    tm_map(removeNumbers) %>%                #Clean by removing numbers
-                    tm_map(removeWords, stopwords(kind="en")) %>% #Clean by removing stopwords
-                    tm_map(removePunctuation) %>%            #Clean by removing punctuation
-                    tm_map(stripWhitespace)                  #Clean by tokenising by striping white space
+                    tm_map(content_transformer(tolower)) %>% # Transofrm to lower case
+                    tm_map(removeNumbers) %>%                # Clean by removing numbers
+                    tm_map(removeWords, stopwords(kind="en")) %>% # Clean by removing stopwords
+                    tm_map(removePunctuation) %>%            # Clean by removing punctuation
+                    tm_map(stripWhitespace)                  # Clean by tokenising by striping white space
 
 # Transform corpus into matrix.
 TDM = DocumentTermMatrix(Clean_BagOfWords)
@@ -472,7 +472,7 @@ SparseWords$MessageLabel <- Spam_SMS$MessageLabel
 
 ## Classification Process to accurately classify SMS messages into Spam messages or Legitimate messages.
 
-Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Sparsewords, Corpus(BagOfWords) and the Term Document Matrix(FinalData). 
+Splitting the data in a ratio of 7:3: 70% to build the predictive model and 30% to test the model. I am splitting the dataset, Sparsewords, Corpus(BagOfWords) and the Term Document Matrix. 
 ```{r}
 # Random number generation using set.seed of 1234.
 set.seed(1234)
@@ -559,7 +559,7 @@ RFSpam_Tree <- randomForest(SMS_RF, data = train_data, ntree=25, proximity = T)
 ImportancePlot <- varImpPlot(RFSpam_Tree, main = "Importance of each Token") 
 
 ```
-This plot salso expresses that the most important token aongst all is 'Ringtone', and the least important are 'adult and congratulation'.
+This plot salso expresses that the most important token amongst all is 'Ringtone', and the least important are 'adult and congratulation'.
 
 ```{r}
 # Importance of each token in a tabular form.
@@ -603,11 +603,11 @@ Plot COnfusion Matrix
 
 Reference_RF <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
 Prediction_RF <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
-Y <- c(1419, 28, 84, 140)
-ConfusionMatrixPlot <- data.frame(Reference_RF, Prediction_RF, Y)
+Y <- c(1419, 28, 87, 137)
+ConfusionMatrixPlot_RF <- data.frame(Reference_RF, Prediction_RF, Y)
 
 # Plot
-ggplot(data =  ConfusionMatrixPlot, mapping = aes(x = Reference_RF, y = Prediction_RF)) +
+ggplot(data =  ConfusionMatrixPlot_RF, mapping = aes(x = Reference_RF, y = Prediction_RF)) +
      geom_tile(aes(fill = Y), colour = "white") +
      geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
      scale_fill_gradient(low = "yellow", high = "dark green") +
@@ -653,8 +653,8 @@ ConfusionMatrixPlot_SVM <- data.frame(Reference_SVM, Prediction_SVM, Y_SVM)
 
 # Plot
 ggplot(data =  ConfusionMatrixPlot_SVM, mapping = aes(x = Reference_SVM, y = Prediction_SVM)) +
-     geom_tile(aes(fill = Y), colour = "white") +
-     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     geom_tile(aes(fill = Y_SVM), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y_SVM)), vjust = 1) +
      scale_fill_gradient(low = "yellow", high = "dark green") +
      theme_bw() + theme(legend.position = "none")
 ```
@@ -787,7 +787,7 @@ CrossTable(RFTest_All, Sparse_test_data$MessageLabel, prop.chisq = FALSE)
 This classifier has produced a model with:
 1. Precision for predicting Legitimate messages is 0.97, while for predicting spam messages is 0.94.
 2. Recall for predicting Legitimate messages is 0.99, while for predicting spam messages is 0.78.
-Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.06) as compared to the probability of a spam message being predicted as a legitimate message (0.03).
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite less (0.03) as compared to the probability of a spam message being predicted as a legitimate message (0.03).
 
 
 Accuracy for test Data.
@@ -803,13 +803,13 @@ Plot Confusion Matrix
 
 Reference_RF_All <- factor(c("Legitimate", "Legitimate", "Spam", "Spam"))
 Prediction_RF_All <- factor(c("Legitimate", "Spam","Legitimate","Spam"))
-Y_All <- c(1435, 49, 12, 175)
-ConfusionMatrixPlot_All <- data.frame(Reference, Prediction, Y)
+Y_All <- c(1440, 7, 49, 175)
+ConfusionMatrixPlot_All <- data.frame(Reference_RF_All, Prediction_RF_All, Y_All)
 
 # Plot
 ggplot(data =  ConfusionMatrixPlot_All, mapping = aes(x = Reference_RF_All, y = Prediction_RF_All)) +
-     geom_tile(aes(fill = Y), colour = "white") +
-     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     geom_tile(aes(fill = Y_All), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y_All)), vjust = 1) +
      scale_fill_gradient(low = "yellow", high = "dark green") +
      theme_bw() + theme(legend.position = "none")
 
@@ -851,8 +851,8 @@ ConfusionMatrixPlot_SVM_All <- data.frame(Reference_SVM_All, Prediction_SVM_All,
 
 # Plot
 ggplot(data =  ConfusionMatrixPlot_SVM_All, mapping = aes(x = Reference_SVM_All, y = Prediction_SVM_All)) +
-     geom_tile(aes(fill = Y), colour = "white") +
-     geom_text(aes(label = sprintf("%1.0f", Y)), vjust = 1) +
+     geom_tile(aes(fill = Y_SVM_All), colour = "white") +
+     geom_text(aes(label = sprintf("%1.0f", Y_SVM_All)), vjust = 1) +
      scale_fill_gradient(low = "yellow", high = "dark green") +
      theme_bw() + theme(legend.position = "none")
 
@@ -903,8 +903,12 @@ CT <- CrossTable(SMS_NBTest_All, Sparse_test_data$MessageLabel,
            prop.t = FALSE, 
            dnn = c("Predicted", "Actual")) #Name of column
 ```
-Accurately predicted all the legitimate and spam messages.
+This classifier has produced a model with:
+1. Precision for predicting Legitimate messages is 0.98, while for predicting spam messages is 0.144.
+2. Recall for predicting Legitimate messages is 0.08, while for predicting spam messages is 0.99.
+Therefore, we can deduce that the probability of predicting  a Legitmate message as a Spam is quite high (0.86) as compared to the probability of a spam message being predicted as a legitimate message (0.02).
 
+Accuracy for test data.
 ```{r}
 nb.accuracy.table.all <- as.data.frame(table(Sparse_test_data$MessageLabel, SMS_NBTest_All))
 print(paste("Accuracy for NB is:",
